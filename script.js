@@ -3342,6 +3342,31 @@ if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js')
             .then(registration => {
                 console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            let updateButton = document.createElement('button');
+                            updateButton.style.position = 'fixed';
+                            updateButton.style.bottom = '20px';
+                            updateButton.style.left = '50%';
+                            updateButton.style.transform = 'translateX(-50%)';
+                            updateButton.style.padding = '12px 20px';
+                            updateButton.style.backgroundColor = '#28a745';
+                            updateButton.style.color = 'white';
+                            updateButton.style.border = 'none';
+                            updateButton.style.borderRadius = '8px';
+                            updateButton.style.cursor = 'pointer';
+                            updateButton.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+                            updateButton.textContent = '發現新版本，點此更新！';
+                            document.body.appendChild(updateButton);
+
+                            updateButton.addEventListener('click', () => {
+                                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                            });
+                        }
+                    });
+                });
             })
             .catch(error => {
                 console.log('ServiceWorker registration failed: ', error);
