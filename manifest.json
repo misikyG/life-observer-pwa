@@ -1,0 +1,21 @@
+{
+  "name": "生活觀察 Life Observer",
+  "short_name": "生活觀察",
+  "description": "一個記錄生活、培養習慣與安排時間的應用程式。",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f1efda",
+  "theme_color": "#82a081",
+  "icons": [
+    {
+      "src": "assets/go-game-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/go-game-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

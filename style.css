@@ -1,0 +1,2048 @@
+        /* --- 1. 全域與基礎樣式 --- */
+        :root {
+            --primary-color: rgba(130, 160, 129, 0.7);
+            --secondary-color: rgba(32, 110, 56, 0.7);
+            --text-light: #faf9db;
+            --bg-light: rgb(241, 239, 218);
+            --card-bg: #d4e2dab0;
+            --shadow: 0 10px 25px rgba(9, 43, 9, 0.473);
+            --danger-color: #aa3b2f;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', 'Chocolate Classical Sans', 'Inter', 'Microsoft JhengHei', sans-serif;
+            background:
+                linear-gradient(180deg, rgba(129, 160, 137, 0.7) 0%, rgba(54, 119, 74, 0.795) 100%),
+                url('https://cdn.discordapp.com/attachments/1345376114272505918/1402512743138984066/96a131d351492643.png?ex=68942f47&is=6892ddc7&hm=ae689f760f85125c96c575b46160f52141dbf8a1c2a78c5c6b5065e366aab35e&');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* --- Icons --- */
+        .sidebar-icon {
+            width: 30px;
+            height: 30px;
+            margin-right: 8px;
+            vertical-align: middle;
+            color: #f1ca5c;
+        }
+
+        .sidebar-Dashboard {
+            width: 35px;
+            height: 35px;
+            margin-right: 1px;
+            vertical-align: -8px;
+        }
+
+        .content-icon {
+            width: 25px;
+            height: 25px;
+            margin-right: 5px;
+            vertical-align: -5px;
+        }
+
+        /* 統一儲存與取消按鈕樣式 */
+        .btn-save-unified,
+        .btn-cancel-unified {
+            background: none;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            cursor: pointer;
+            padding: 8px;
+            font-size: 1rem;
+            line-height: 1;
+            transition: all 0.2s;
+        }
+
+        .btn-save-unified {
+            color: #3e8f62;
+            border-color: #3e8f62;
+        }
+
+        .btn-save-unified:hover {
+            background: #e3fdec;
+        }
+
+        .btn-cancel-unified {
+            color: var(--danger-color);
+            border-color: var(--danger-color);
+        }
+
+        .btn-cancel-unified:hover {
+            background: #fbe9e7;
+        }
+
+        /* 編輯 */
+        .unified-edit-container .edit-mode-controls,
+        .unified-edit-container .view-mode-controls {
+            display: flex;
+            display: none;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .unified-edit-container.is-editing .view-mode-controls {
+            display: none;
+        }
+
+        .unified-edit-container.is-editing .edit-mode-controls {
+            display: flex;
+        }
+
+        .unified-edit-container.is-editing .view-mode-content {
+            display: none;
+        }
+
+        .unified-edit-container .edit-mode-form {
+            display: none;
+        }
+
+        .unified-edit-container.is-editing .edit-mode-form {
+            display: block;
+        }
+
+        .btn-save-unified,
+        .btn-cancel-unified {
+            color: var(--danger-color);
+            border-color: var(--danger-color);
+            background: none;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            cursor: pointer;
+            padding: 8px;
+            font-size: 1.1rem;
+            line-height: 1;
+            transition: all 0.2s;
+        }
+
+        .btn-save-unified:hover {
+            background: #e3fdec;
+        }
+
+        .btn-cancel-unified:hover {
+            background: #fbe9e7;
+        }
+
+        /* 卡片 */
+        .card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(14, 48, 24, 0.05);
+            border-left: 5px solid var(--primary-color);
+            color: rgb(99, 57, 9);
+        }
+
+        .card h3 {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* 表單群組 */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 9px;
+            border: 2px solid #c9b3b385;
+            border-radius: 10px;
+            font-size: 0.9rem;
+        }
+
+        /* 主要按鈕 */
+        .btn {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: rgb(255, 255, 255);
+            border: none;
+            padding: 12px 20px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 刪除按鈕 */
+        .btn-delete {
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            font-size: 0.9rem;
+            border-radius: 5px;
+            height: 40px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn-delete:hover {
+            background: #993e2e;
+        }
+
+        /* 釘選/切換按鈕 */
+        .btn-pin {
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            color: #555;
+            border-radius: 5px;
+            cursor: pointer;
+            padding: 5px 10px;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+        }
+
+        .btn-pin:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-pin.pinned,
+        .btn-pin.active {
+            background: var(--secondary-color);
+            color: white;
+            border-color: var(--secondary-color);
+            font-weight: bold;
+        }
+
+        /* 文字輸入區域 */
+        .textarea {
+            width: 100%;
+            min-height: 130px;
+            max-height: 190px;
+            padding: 15px;
+            border: 1px solid #775353;
+            border-radius: 10px;
+            font-size: 1rem;
+            resize: none;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+
+        .textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        /* --- 滾動條 --- */
+        .main-content::-webkit-scrollbar,
+        #recordsList::-webkit-scrollbar,
+        #timeline-container::-webkit-scrollbar,
+        #pinned-notes-content::-webkit-scrollbar,
+        #yesterday-review::-webkit-scrollbar,
+        .chat-messages::-webkit-scrollbar,
+        #tag-search-content::-webkit-scrollbar,
+        #global-search-results::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .main-content::-webkit-scrollbar-track,
+        #recordsList::-webkit-scrollbar-track,
+        #timeline-container::-webkit-scrollbar-track,
+        #pinned-notes-content::-webkit-scrollbar-track,
+        #yesterday-review::-webkit-scrollbar-track,
+        .chat-messages::-webkit-scrollbar-track,
+        #tag-search-content::-webkit-scrollbar-track,
+        #global-search-results::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 10px;
+        }
+
+        .main-content::-webkit-scrollbar-thumb,
+        #recordsList::-webkit-scrollbar-thumb,
+        #timeline-container::-webkit-scrollbar-thumb,
+        #pinned-notes-content::-webkit-scrollbar-thumb,
+        #yesterday-review::-webkit-scrollbar-thumb,
+        .chat-messages::-webkit-scrollbar-thumb,
+        #tag-search-content::-webkit-scrollbar-thumb,
+        #global-search-results::-webkit-scrollbar-thumb {
+            background-color: var(--primary-color);
+            border-radius: 10px;
+        }
+
+        .main-content::-webkit-scrollbar-thumb:hover,
+        #recordsList::-webkit-scrollbar-thumb:hover,
+        #timeline-container::-webkit-scrollbar-thumb:hover,
+        #pinned-notes-content::-webkit-scrollbar-thumb:hover,
+        #yesterday-review::-webkit-scrollbar-thumb:hover,
+        .chat-messages::-webkit-scrollbar-thumb:hover,
+        #tag-search-content::-webkit-scrollbar-thumb:hover,
+        #global-search-results::-webkit-scrollbar-thumb:hover {
+            background-color: var(--secondary-color);
+        }
+
+        /* --- 2. 主要版面配置 --- */
+        /* 整體容器 */
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            background: rgb(233, 233, 233);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            display: flex;
+        }
+
+        /* 側邊導覽列 */
+        .sidebar {
+            width: 180px;
+            background: linear-gradient(90deg, #6c916e, #3f7441d5);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            color: var(--text-light);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            transition: width 0.3s;
+        }
+
+        .sidebar-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.5rem;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            flex-grow: 1;
+        }
+
+        .sidebar-menu li a {
+            display: block;
+            padding: 15px;
+            color: var(--text-light);
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: background 0.3s;
+            font-size: 1rem;
+        }
+
+        .sidebar-menu li a.active,
+        .sidebar-menu li a:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* 主要內容區 */
+        .main-content {
+            flex: 1;
+            padding: 30px 40px;
+            background: var(--bg-light);
+            overflow-y: auto;
+            max-height: 95vh;
+        }
+
+        /* 內容區塊通用樣式 */
+        .content-section {
+            width: 100%;
+        }
+
+        /* 內容區頭部 */
+        .header {
+            margin-bottom: 30px;
+            color: #91561e;
+        }
+
+        .header h1 {
+            font-size: 0rem;
+            margin-bottom: 5px;
+        }
+
+        .header .date {
+            font-size: 1rem;
+            color: #666;
+            transition: font-size 0.3s;
+        }
+
+        /* 內容網格佈局 (通用) */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+        }
+
+        .main-column,
+        .side-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* 單欄佈局 (用於統計、設定頁面) */
+        .single-column-layout {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* --- 4. 打卡記錄Attendance Tracker --- */
+        #attendance-tracker-section .container-tracker {
+            max-width: 100%;
+            background: transparent;
+            border-radius: 0;
+            box-shadow: none;
+            overflow: visible;
+        }
+
+        /* 打卡按鈕 */
+        #attendance-tracker-section .punch-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        #attendance-tracker-section .punch-btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 150px;
+        }
+
+        #attendance-tracker-section .punch-btn.work-in {
+            background-color: rgba(29, 94, 58, 0.856);
+            color: white;
+        }
+
+        #attendance-tracker-section .punch-btn.work-out {
+            background-color: rgba(182, 67, 47, 0.856);
+            color: white;
+        }
+
+        #attendance-tracker-section .punch-btn.break-start {
+            background-color: rgba(206, 153, 38, 0.856);
+            color: white;
+        }
+
+        #attendance-tracker-section .punch-btn.break-end {
+            background-color: rgba(120, 81, 128, 0.856);
+            color: white;
+        }
+
+        #attendance-tracker-section .punch-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(39, 8, 8, 0.2);
+        }
+
+        #attendance-tracker-section .punch-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 打卡頁網格佈局 */
+        .tracker-main-grid {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .tracker-grid-left,
+        .tracker-grid-right {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        /* 打卡頁卡片 */
+        #attendance-tracker-section .settings-tracker,
+        #attendance-tracker-section .status-tracker,
+        #attendance-tracker-section .data-management-tracker,
+        #attendance-tracker-section .records-tracker,
+        #attendance-tracker-section .charts-section {
+            margin-bottom: 0;
+        }
+
+        #attendance-tracker-section .settings-tracker {
+            background: #d4e2dab0;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        #attendance-tracker-section .status-tracker,
+        #attendance-tracker-section .records-tracker {
+            background: #fff7dc;
+            border-left: 5px solid #dee678;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        #attendance-tracker-section h3 {
+            color: rgb(99, 57, 9);
+        }
+
+        /* 提醒設定 */
+        #attendance-tracker-section .setting-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            color: rgb(99, 57, 9);
+        }
+
+        #attendance-tracker-section .setting-row label {
+            min-width: 120px;
+            font-weight: bold;
+            color: rgb(99, 57, 9);
+        }
+
+        /* 通知權限 */
+        #attendance-tracker-section .notification-permission {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            background: #faf9df;
+            border: 1px solid #dde5eb;
+        }
+
+        #attendance-tracker-section .notification-permission button {
+            background: #ad8d5c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* 當前狀態 */
+        #statusContent {
+            height: 50px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        /* 記錄列表 */
+        #recordsList {
+            max-height: 725px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        #attendance-tracker-section .record-item {
+            padding: 10px;
+            background: white;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 3px solid #6b9674;
+            font-size: 0.85rem;
+        }
+
+        /* 圖表區 */
+        #attendance-tracker-section .charts-section {
+            display: grid;
+            gap: 20px;
+        }
+
+        #attendance-tracker-section .chart-container {
+            background: #d4e2dab0;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        #attendance-tracker-section .chart-container h3 {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        /* 通知權限樣式 */
+        #attendance-tracker-section .notification-permission.permission-granted span {
+            color: #2e6b49;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        #attendance-tracker-section .notification-permission.permission-denied span {
+            color: var(--danger-color);
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        #attendance-tracker-section .notification-permission button {
+            background: #ad8d5c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: background 0.3s;
+        }
+
+        #attendance-tracker-section .notification-permission button:hover {
+            background: #91703c;
+            font-size: 0.9rem;
+        }
+
+        /* --- 5. 時間安排 Time Schedule --- */
+        /* 時間安排頁面特定樣式 */
+        #current-date-display {
+            font-size: 1.3rem;
+            cursor: pointer;
+            padding: 10px 20px;
+            border-radius: 120px;
+            background: rgba(117, 117, 117, 0.2);
+            -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(219, 186, 186, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            text-align: center;
+            margin: 0 10px !important;
+        }
+
+        #current-date-display:hover {
+            background: rgba(199, 199, 199, 0.4);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+            transform: translateY(-2px);
+        }
+
+        #time-quadrant-section .timeline-panel.card {
+            border-left: none;
+            box-shadow: 0 5px 15px rgba(14, 48, 24, 0.1);
+        }
+
+        #time-quadrant-section .tools-panel .card {
+            background: #fff7dc;
+            border-left-color: #dee678;
+        }
+
+        /* 時間安排網格佈局 */
+        .time-schedule-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+
+        /* 時間軸面板 */
+        .timeline-panel.card {
+            display: flex;
+            flex-direction: column;
+            max-height: 1150px;
+            gap: 20px;
+        }
+
+        #timeline-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            min-height: 0;
+            position: relative;
+        }
+
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 15px;
+            margin-bottom: -10px;
+            border-bottom: 1px solid rgba(99, 57, 9, 0.2);
+        }
+
+        .date-nav {
+            background-color: rgba(129, 160, 137, 0.5);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            color: rgb(99, 57, 9);
+            transition: background-color 0.2s;
+        }
+
+        .date-nav:hover {
+            background-color: var(--primary-color);
+        }
+
+        /* 時間區塊 */
+        .time-block {
+            display: flex;
+            align-items: flex-start;
+            border-top: 1px solid rgba(99, 57, 9, 0.08);
+            position: relative;
+            padding: 8px 0;
+            min-height: 60px;
+        }
+
+        .time-block:first-child {
+            border-top: none;
+        }
+
+        /* 時間標籤 */
+        .time-label {
+            flex-shrink: 0;
+            width: 70px;
+            padding-top: 5px;
+            text-align: center;
+            color: #ae8a6b;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+
+        /* 任務區域 */
+        .task-area {
+            flex-grow: 1;
+            padding: 0 16px;
+            position: static;
+            border-left: 1px solid rgba(99, 57, 9, 0.08);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .add-task-btn-left {
+            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+            border: none;
+            background-color: transparent;
+            color: #b0c4b8;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: -5px;
+        }
+
+        .add-task-btn-left:hover {
+            background-color: rgba(211, 226, 218, 0.8);
+            color: #633909;
+            transform: scale(1.1);
+        }
+
+        .task-item {
+            left: 130px;
+            width: calc(100% - 130px);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            gap: 5px;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-radius: 12px;
+            padding: 8px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            position: absolute;
+            color: white;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            box-sizing: border-box;
+            z-index: 5;
+            min-height: 50px;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .task-item:hover {
+            z-index: 6;
+            transform: scale(1.01);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .task-item.completed {
+            background: rgba(150, 150, 150, 0.25) !important;
+            border-left-color: rgba(150, 150, 150, 0.8) !important;
+        }
+
+        .task-item.completed .task-content-display {
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+
+        .task-item.completed {
+            background: rgba(150, 150, 150, 0.25) !important;
+            border-left-color: rgba(150, 150, 150, 0.8) !important;
+        }
+
+        .task-item.completed .task-content-display {
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+
+        .task-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .task-completion {
+            flex-shrink: 0;
+            padding-top: 2px;
+        }
+
+        .task-completion input[type="checkbox"] {
+            display: none;
+        }
+
+        .task-completion label {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .task-completion input[type="checkbox"]:checked+label {
+            background-color: #4caf50;
+            border-color: #4caf50;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23fff' d='M6.564.75l-3.59 3.612-1.538-1.55L0 4.26l2.974 2.99L8 2.193z'/%3e%3c/svg%3e");
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .task-item .task-content-display {
+            flex-grow: 1;
+            font-size: 0.95em;
+            font-weight: 500;
+        }
+
+        .task-actions {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            display: flex;
+            gap: 5px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .task-item:hover .task-actions {
+            opacity: 1;
+        }
+
+        .btn-task-action {
+            background: rgba(0, 0, 0, 0.2);
+            border: none;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            font-size: 14px;
+        }
+
+        .btn-task-action:hover {
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .task-item:hover {
+            transform: scale(1.01);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .task-item[data-quadrant="A"] {
+            background: rgba(239, 68, 68, 0.25);
+            border-left: 4px solid rgba(239, 68, 68, 0.8);
+        }
+
+        .task-item[data-quadrant="B"] {
+            background: rgba(43, 165, 124, 0.25);
+            border-left: 4px solid rgba(43, 165, 124, 0.8);
+        }
+
+        .task-item[data-quadrant="C"] {
+            background: rgba(7, 6, 83, 0.25);
+            border-left: 4px solid rgba(39, 36, 251, 0.8);
+        }
+
+        .task-item[data-quadrant="D"] {
+            background: rgba(104, 85, 161, 0.25);
+            border-left: 4px solid rgba(104, 85, 161, 0.8);
+        }
+
+
+        /* 任務內容和時間的樣式 */
+        .task-item .task-time-display {
+            font-size: 0.8em;
+            font-weight: bold;
+            opacity: 0.8;
+        }
+
+        .task-item .task-content-display {
+            font-size: 0.95em;
+            font-weight: 500;
+        }
+
+        /* 時長標籤 */
+        .task-duration-badge {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            color: rgba(255, 255, 255, 0.9);
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        /* 時長按紐 */
+
+        .btn-duration-adjust {
+            background-color: #e0e7e2;
+            border: 1px solid #c0ccc5;
+            color: #3e634b;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-duration-adjust:hover {
+            background-color: #c9d8d0;
+            border-color: #a6b5ad;
+            transform: translateY(-1px);
+        }
+
+        .btn-duration-adjust:active {
+            transform: translateY(0);
+        }
+
+        .duration-btn:hover {
+            background: white;
+            transform: scale(1.1);
+        }
+
+        /* 任務內容 Markdown 渲染樣式 */
+        .task-rendered-content {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .task-rendered-content p,
+        .task-rendered-content ul,
+        .task-rendered-content ol {
+            margin-top: 4px;
+            margin-bottom: 4px;
+        }
+
+        .task-rendered-content ul,
+        .task-rendered-content ol {
+            padding-left: 20px;
+        }
+
+        .color-selector {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            padding-top: 5px;
+        }
+
+        .color-dot {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .color-dot:hover {
+            transform: scale(1.1);
+        }
+
+        .color-dot.selected {
+            border-color: #96969675;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+            transform: scale(1.15);
+        }
+
+        /* 四象限提醒卡片 */
+        .quadrant-info-card {
+            display: grid;
+            width: 400px;
+        }
+
+        .quadrant-info-card .matrix-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .quadrant-info-card .quadrant {
+            border-radius: 12px;
+            padding: 15px;
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .quadrant-info-card .quadrant:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .quadrant-info-card .quadrant-header {
+            margin-bottom: 10px;
+        }
+
+        .quadrant-info-card .quadrant-title {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .quadrant-info-card .quadrant-subtitle {
+            font-size: 0.85em;
+            color: #555;
+        }
+
+        .quadrant-info-card .tasks-area {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .quadrant-info-card .task-tag {
+            background: rgba(255, 255, 255, 0.7);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            word-break: break-all;
+        }
+
+        .quadrant-info-card .task-delete-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #999;
+            font-size: 1.1em;
+            padding: 0 5px;
+            transition: color 0.2s;
+        }
+
+        .quadrant-info-card .task-delete-btn:hover {
+            color: #c92a2a;
+        }
+
+        .quadrant-info-card .add-task-btn {
+            align-self: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(0, 0, 0, 0.05);
+            cursor: pointer;
+            font-size: 18px;
+            color: #777;
+            transition: all 0.2s;
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .quadrant-info-card .add-task-btn:hover {
+            background: rgba(0, 0, 0, 0.12);
+            transform: scale(1.1);
+        }
+
+        .tools-panel-card-style {
+            background: #fff7dc;
+            border-left-color: #dee678 !important;
+        }
+
+        /* 四象限顏色 */
+        .quadrant-a {
+            background-color: rgba(255, 215, 209, 0.8);
+            color: rgb(240, 83, 72);
+        }
+
+        .quadrant-b {
+            background-color: rgba(186, 255, 196, 0.8);
+            color: rgb(43, 165, 124);
+        }
+
+        .quadrant-c {
+            background-color: rgba(200, 214, 255, 0.8);
+            color: rgb(90, 110, 224);
+        }
+
+        .quadrant-d {
+            background-color: rgba(219, 205, 255, 0.8);
+            color: rgb(104, 85, 161);
+        }
+
+        /* 統計分數文字樣式 */
+        #daily-stats-text,
+        #monthly-stats-text,
+        #daily-stats-text strong,
+        #monthly-stats-text strong {
+            background: linear-gradient(150deg, #ffffff, #66596b);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            text-shadow: 2px 2px 5px rgba(112, 112, 112, 0.4);
+        }
+
+        #monthly-stats-text span {
+            background: linear-gradient(0deg, #FFFFFF, #DDDDDD);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.4);
+        }
+
+        /* --- 6. 習慣培養 Habit Tracker --- */
+        /* 習慣培養頁面特定樣式 */
+        #habit-tracker-section .main-column .card {
+            border-left: none;
+            box-shadow: 0 5px 15px rgba(14, 48, 24, 0.1);
+        }
+
+        #habit-tracker-section .side-column .card {
+            background: #fff7dc;
+            border-left-color: #dee678;
+        }
+
+        /* 習慣項目 */
+        .habit-item {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 5px solid;
+        }
+
+        .habit-main-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .habit-item .habit-name {
+            flex-grow: 1;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .habit-item .habit-edit-input {
+            width: 100%;
+        }
+
+        .habit-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .edit-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 80px;
+        }
+
+        /* 習慣打卡按鈕 */
+        .habit-check-toggle {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            border: 2px solid #adb5bd;
+            border-radius: 50%;
+            cursor: pointer;
+            background-color: white;
+            transition: all 0.2s;
+            font-size: 16px;
+            color: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .habit-check-toggle.completed {
+            background-color: #38d9a9;
+            border-color: #38d9a9;
+            color: rgb(255, 253, 242);
+        }
+
+        .habit-check-toggle:disabled {
+            cursor: not-allowed;
+            background-color: #d2f1e8;
+        }
+
+        /* 習慣進度條 */
+        .habit-progress-details {
+            padding-left: 36px;
+        }
+
+        .habit-progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+            color: #666;
+        }
+
+        .habit-progress-bar-container {
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .habit-progress-bar {
+            height: 8px;
+            background: var(--primary-color);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+
+
+        /* --- 7. 心情筆記 Mood & Notes --- */
+        /* 心情標籤 */
+        .mood-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .mood-tag {
+            background: #e3fdec;
+            color: #3e8f62;
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            border: 1px solid #bbfbcb;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .mood-tag:hover {
+            background: #6eb4829a;
+            color: white;
+        }
+
+        .mood-tag.selected {
+            background: #559672;
+            color: white;
+            font-weight: bold;
+        }
+
+        /* 自訂標籤列表 */
+        #custom-tags-list {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f3f3e800;
+            border-radius: 8px;
+        }
+
+        .custom-tag-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95rem;
+            padding: 10px 15px;
+            background-color: #f3f3e8;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .custom-tag-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        /* 釘選筆記 */
+        #pinned-notes-content {
+            max-height: 500px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .pinned-note {
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .pinned-note:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .pinned-note-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .pinned-note-header strong {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #666;
+        }
+
+        .pinned-note-preview p,
+        .pinned-note-full p {
+            color: #333;
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        /* 釘選筆記內文樣式 */
+        .pinned-note-full div p,
+        .pinned-note-full div ul,
+        .pinned-note-full div ol,
+        .pinned-note-full div li,
+        .pinned-note-full div h1,
+        .pinned-note-full div h2,
+        .pinned-note-full div h3 {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin: 4px 0;
+        }
+
+        .pinned-note-full div ul,
+        .pinned-note-full div ol {
+            padding-left: 25px;
+        }
+
+        /* 昨日回顧 */
+        #yesterday-review {
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        /* --- 8. 綜合統計 Review & Stats --- */
+        /* 月曆 */
+        #calendar-view {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            text-align: center;
+        }
+
+        .calendar-header {
+            font-weight: bold;
+            padding: 5px;
+        }
+
+        .calendar-day {
+            padding: 10px 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+            position: relative;
+        }
+
+        .calendar-day.other-month {
+            color: #ccc;
+        }
+
+        .calendar-day:not(.other-month):hover {
+            background: #eef;
+        }
+
+        .calendar-day.has-entry::after {
+            content: '';
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+        }
+
+        .calendar-day.selected {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        /* 回顧項目 */
+        .review-entry {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            border-left: 4px solid var(--secondary-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .review-entry-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        #review-content .review-entry .mood-tag {
+            font-size: 0.8rem;
+            padding: 3px 10px;
+        }
+
+        #review-content .review-entry div p,
+        #review-content .review-entry div ul,
+        #review-content .review-entry div ol,
+        #review-content .review-entry div li,
+        #review-content .review-entry div h1,
+        #review-content .review-entry div h2,
+        #review-content .review-entry div h3 {
+            font-size: 0.92rem;
+            line-height: 1.6;
+            margin: 6px 0;
+        }
+
+        #review-content .review-entry div ul,
+        #review-content .review-entry div ol {
+            padding-left: 25px;
+        }
+
+        #daily-summary-card {
+            border-left: none;
+            background: rgba(241, 239, 218, 0.75);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 2px solid rgba(144, 167, 150, 0.158);
+        }
+
+        #daily-summary-content {
+            font-size: 0.95rem;
+            line-height: 1.8;
+        }
+
+        #daily-summary-content ul {
+            list-style-position: inside;
+            padding-left: 5px;
+        }
+
+        #daily-summary-content li {
+            margin-bottom: 12px;
+        }
+
+        #review-stats-section .single-column-layout>.card {
+            border-left: none;
+        }
+
+        /* --- 9. 資料管理與設定 Data & Settings --- */
+        .data-management-container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .data-management-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .data-management-btn {
+            display: flex;
+            width: 150px;
+            height: 50px;
+            vertical-align: baseline;
+            align-items: center;
+            justify-content: center;
+            gap: 1px;
+            padding: 10px 10px;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            color: white;
+            text-align: center;
+        }
+
+        .data-management-btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 9px 20px rgba(0, 0, 0, 0.267);
+        }
+
+        .data-management-btn .icon {
+            width: 30px;
+            height: 30px;
+        }
+
+        .data-management-btn.export {
+            background-color: #ccb360;
+        }
+
+        .data-management-btn.import {
+            background-color: #4978ad;
+        }
+
+        .data-management-btn.danger {
+            background-color: var(--danger-color);
+        }
+
+        .data-management-btn.warning {
+            background-color: #86689e;
+        }
+
+        /* 獨立匯出區塊 */
+        .individual-exports h5 {
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .individual-exports .data-buttons {
+            justify-content: flex-start;
+            gap: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .individual-exports .data-buttons .data-btn {
+            display: flex;
+            width: 130px;
+            height: 30px;
+            vertical-align: baseline;
+            align-items: center;
+            justify-content: center;
+            background-color: #f0efebde;
+            border: 2px solid #ecd8a1b2;
+            color: #80510c;
+            padding: 6px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .individual-exports .data-buttons .data-btn:hover {
+            background-color: #f3db97b2;
+            border-color: #dab848;
+            transform: translateY(-1px);
+        }
+
+
+        /* --- 10. 全局搜尋 Global Search --- */
+        #global-search-results .search-content-area {
+            margin-left: 8px;
+            margin-right: 13px;
+        }
+
+        #tag-search-content {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        #search-section .single-column-layout {
+            max-width: 1300px;
+        }
+
+        #tag-search-content {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        #global-search-results .review-entry {
+            font-size: 0.9rem;
+            padding: 20px;
+        }
+
+        #global-search-results .review-entry strong {
+            font-size: 0.98rem;
+        }
+
+        #global-search-results .search-content-display,
+        #global-search-results .search-content-display p,
+        #global-search-results .search-content-display small {
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        /* --- 11. 外部函式庫 --- */
+        /* Flatpickr 日曆美化 */
+        .flatpickr-calendar {
+            background: var(--bg-light);
+            border-radius: 12px;
+            border: 1px solid var(--primary-color);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            width: 320px;
+        }
+
+        .flatpickr-months .flatpickr-month {
+            color: var(--secondary-color);
+            fill: var(--secondary-color);
+            height: 40px;
+        }
+
+        .flatpickr-weekdays {
+            background: var(--primary-color);
+        }
+
+        span.flatpickr-weekday {
+            color: white;
+            font-weight: bold;
+        }
+
+        .flatpickr-day {
+            color: rgb(99, 57, 9);
+            font-weight: 500;
+        }
+
+        .flatpickr-day.selected,
+        .flatpickr-day.startRange,
+        .flatpickr-day.endRange {
+            background: var(--secondary-color);
+            border-color: var(--secondary-color);
+            color: white;
+        }
+
+        .flatpickr-day:hover {
+            background: rgba(129, 160, 137, 0.3);
+        }
+
+        /* --- 14. 響應式設計 --- */
+        @media (min-width: 992px) {
+
+            .time-schedule-grid {
+                grid-template-columns: 2fr 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+
+            .sidebar-menu li a {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .sidebar-menu li a .menu-item-text {
+                display: none;
+            }
+
+            .sidebar-menu li a.active .menu-item-text {
+                display: inline;
+            }
+
+            .sidebar-menu li a.active {
+                padding-left: 15px;
+                padding-right: 15px;
+            }
+
+            .tracker-main-grid {
+                grid-template-columns: 1fr;
+            }
+
+            body {
+                padding: 0;
+            }
+
+            .container {
+                flex-direction: column;
+                border-radius: 0;
+                height: 100vh;
+            }
+
+            .sidebar {
+                width: 100%;
+                background: linear-gradient(180deg, #6c916e, #3f7441d5);
+                height: auto;
+                flex-direction: row;
+                justify-content: center;
+                padding: 10px;
+                flex-shrink: 0;
+            }
+
+            .sidebar-header {
+                display: none;
+            }
+
+            .sidebar-menu {
+                display: flex;
+                flex-grow: 0;
+                gap: 5px;
+                overflow-x: auto;
+            }
+
+            .sidebar-menu li a {
+                padding: 8px 12px;
+                font-size: 0.9rem;
+                white-space: nowrap;
+            }
+
+            .main-content {
+                padding: 20px;
+                max-height: none;
+                flex-grow: 1;
+            }
+
+            .content-grid,
+            #attendance-tracker-section .charts-section {
+                grid-template-columns: 1fr;
+            }
+
+            .tracker-main-grid {
+                grid-template-columns: 1fr;
+            }
+
+            #attendance-tracker-section .setting-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            #attendance-tracker-section .setting-row label {
+                min-width: auto;
+                margin-bottom: 5px;
+            }
+
+            #attendance-tracker-section .setting-row input[type="number"],
+            #attendance-tracker-section .setting-row input[type="checkbox"] {
+                width: auto;
+            }
+
+            #attendance-tracker-section .punch-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .data-backup-buttons {
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+                align-items: stretch;
+            }
+
+            #ai-chat-window {
+                width: 380px !important;
+            }
+
+            #ai-chat-container {
+                left: 25px !important;
+            }
+
+            .timeline-panel.card {
+                max-height: 800px !important;
+            }
+        }
+
+        /* --- 15. 浮動AI聊天室 --- */
+
+        #ai-chat-input.textarea {
+            padding: 8px 12px;
+            min-height: 40px;
+        }
+
+        #ai-chat-container {
+            position: fixed;
+            bottom: 30px;
+            left: 50px;
+            z-index: 1001;
+        }
+
+        /* 聊天氣泡按鈕 */
+        #ai-chat-bubble {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.384);
+            transition: all 0.3s ease;
+            color: white;
+        }
+
+        #ai-chat-bubble:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+        }
+
+        /* 聊天視窗本體 */
+        #ai-chat-window {
+            position: absolute;
+            bottom: 80px;
+            left: 0;
+            width: 500px;
+            height: 650px;
+            max-height: 80vh;
+            background: rgba(241, 239, 218, 0.6);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(66, 66, 66, 0.103);
+            transform-origin: bottom left;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            transform: scale(0);
+            opacity: 0;
+        }
+
+        #ai-chat-window:not(.hidden) {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        #ai-chat-window .chat-header {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            background: rgba(66, 112, 78, 0.6);
+            color: var(--text-light);
+            border-top-left-radius: 15px;
+            border-top-right-radius: 15px;
+        }
+
+        #ai-chat-window .chat-header h3 {
+            margin: 0;
+            flex-grow: 1;
+            font-size: 1.1rem;
+        }
+
+        #ai-chat-window .chat-header button {
+            background: none;
+            border: none;
+            color: var(--text-light);
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 5px;
+            line-height: 1;
+        }
+
+        #ai-chat-window .chat-header button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+        }
+
+        #ai-chat-window .chat-messages {
+            flex-grow: 1;
+            padding: 15px;
+            color: rgb(63, 37, 7);
+        }
+
+        #ai-chat-window .chat-input {
+            padding: 15px;
+            border-top: 1px solid rgba(99, 57, 9, 0.1);
+        }
+
+        /* 新訊息通知 */
+        #ai-chat-notification {
+            position: absolute;
+            bottom: 100%;
+            left: 150px;
+            margin-bottom: 15px;
+            padding: 15px 15px;
+            background-color: #fff7dc;
+            color: #633909;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            width: max-content;
+            height: max-content;
+            max-width: 250px;
+            max-height: 100px;
+            font-size: 0.85rem;
+            animation: notification-popup 0.5s ease forwards;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* AI 聊天 */
+        .chat-messages {
+            height: 500px;
+            overflow-y: auto;
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.03);
+            border-radius: 10px;
+        }
+
+        .chat-message-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .chat-message-container:hover .btn-delete-chat {
+            opacity: 1;
+        }
+
+        .chat-message-container:has(.user) {
+            justify-content: flex-end;
+        }
+
+        .chat-message-container:has(.user) .chat-message {
+            order: 2;
+        }
+
+        .chat-message {
+            flex-grow: 0;
+            white-space: pre-wrap;
+            padding: 8px 12px;
+            border-radius: 15px;
+            max-width: 85%;
+            line-height: 1.4;
+            font-size: 0.9rem;
+        }
+
+        .chat-message.user {
+            background: #a8cfb2;
+            margin-left: auto;
+            border-bottom-right-radius: 3px;
+        }
+
+        .chat-message.ai {
+            background: #f4f5e5;
+            margin-right: auto;
+            border-bottom-left-radius: 3px;
+        }
+
+        .chat-message.ai-loading {
+            font-style: italic;
+            color: #997a7a;
+        }
+
+        .chat-input {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            /* 新增此行 */
+        }
+
+        .btn-delete-chat {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #999;
+            opacity: 0;
+            transition: opacity 0.2s;
+            padding: 5px;
+        }
+
+        @keyframes notification-popup {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, 10px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+        }
+
+        /* --- AI 聊天檔案上傳 --- */
+        .chat-input-wrapper {
+            padding: 15px;
+            border-top: 1px solid rgba(99, 57, 9, 0.1);
+        }
+
+        #file-preview-container {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.05);
+            padding: 8px;
+            border-radius: 8px;
+        }
+
+        #file-preview-container.hidden {
+            display: none;
+        }
+
+        #file-preview-container img {
+            max-width: 50px;
+            max-height: 50px;
+            border-radius: 5px;
+            object-fit: cover;
+        }
+
+        #file-preview-container .file-info {
+            font-size: 0.8rem;
+            color: #633909;
+            flex-grow: 1;
+        }
+
+        #file-preview-container .file-info span {
+            display: block;
+            font-weight: bold;
+            word-break: break-all;
+        }
+
+        #file-preview-container button {
+            background: transparent;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: var(--danger-color);
+        }
+
+        #ai-chat-window .chat-input {
+            padding: 0;
+            border-top: none;
+        }
