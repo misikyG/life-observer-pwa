@@ -629,6 +629,7 @@ const AttendanceTracker = {
             recordsList.innerHTML = '<div class="record-item">暫無打卡記錄</div>';
             return;
         }
+        records.sort((a, b) => b.timestamp - a.timestamp);
         const icons = { 'work-in': '🕛', 'work-out': '🛌', 'break-start': '☕', 'break-end': '💼' };
         recordsList.innerHTML = records.map(r => `<div class="record-item">${icons[r.type] || '📝'} ${this.getActionName(r.type)} - ${r.dateTime}</div>`).join('');
     },
