@@ -1793,7 +1793,7 @@
 
         #ai-chat-container {
             position: fixed;
-            bottom: 30px;
+            bottom: 10px;
             left: 50px;
             z-index: 1001;
         }
@@ -1913,17 +1913,17 @@
         .chat-messages {
             height: 500px;
             overflow-y: auto;
-            margin: 15px 0;
-            padding: 10px;
+            margin: 0px;
+            padding: 5px 10px;
             background: rgba(0, 0, 0, 0.03);
-            border-radius: 10px;
+            border-radius: 13px;
         }
 
         .chat-message-container {
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-bottom: 10px;
+            margin-bottom: 13px;
         }
 
         .chat-message-container:hover .btn-delete-chat {
@@ -1941,7 +1941,7 @@
         .chat-message {
             flex-grow: 0;
             white-space: pre-wrap;
-            padding: 8px 12px;
+            padding: 10px 12px;
             border-radius: 15px;
             max-width: 85%;
             line-height: 1.4;
@@ -2006,7 +2006,7 @@
             align-items: center;
             gap: 10px;
             background: rgba(0, 0, 0, 0.05);
-            padding: 8px;
+            padding: 0px;
             border-radius: 8px;
         }
 
