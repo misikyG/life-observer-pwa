@@ -1,4 +1,4 @@
-/* --- 1. 全域與基礎樣式 --- */
+ /* --- 1. 全域與基礎樣式 --- */
         :root {
             --primary-color: rgba(130, 160, 129, 0.7);
             --secondary-color: rgba(32, 110, 56, 0.7);
@@ -17,7 +17,9 @@
 
         body {
             font-family: 'Noto Sans TC', 'Chocolate Classical Sans', 'Inter', 'Microsoft JhengHei', sans-serif;
-            background: linear-gradient(180deg, rgba(129, 160, 137, 0.7) 0%, rgba(54, 119, 74, 0.795) 100%);
+            background:
+                linear-gradient(180deg, rgba(129, 160, 137, 0.7) 0%, rgba(54, 119, 74, 0.795) 100%),
+                url('https://cdn.discordapp.com/attachments/1345376114272505918/1402512743138984066/96a131d351492643.png?ex=68942f47&is=6892ddc7&hm=ae689f760f85125c96c575b46160f52141dbf8a1c2a78c5c6b5065e366aab35e&');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -30,64 +32,6 @@
             display: none;
         }
 
-        /* --- 1.1 全域卡片樣式 (Unified Card Style) --- */
-        /* 註：所有卡片都應在 HTML 中套用 .card 類別，以確保基礎樣式一致 */
-        .card {
-            background: var(--card-bg);
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: var(--shadow);
-            border-left: 5px solid var(--primary-color);
-            color: rgb(99, 57, 9);
-        }
-
-        .card h3 {
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        /* --- 1.2 全域表單與輸入框 (Unified Form & Input) --- */
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-
-        /* 統一輸入框標準 */
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            padding: 10px 12px;
-            border: 2px solid #dcdcdc;
-            border-radius: 10px;
-            font-size: 0.9rem;
-            background-color: #ffffff;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(130, 160, 129, 0.25);
-        }
-
-        /* Textarea 特定樣式 */
-        .form-group textarea {
-            min-height: 130px;
-            max-height: 190px;
-            resize: vertical;
-            overflow-y: auto;
-        }
-        
         /* --- Icons --- */
         .sidebar-icon {
             width: 30px;
@@ -193,6 +137,44 @@
             background: #fbe9e7;
         }
 
+        /* 卡片 */
+        .card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(14, 48, 24, 0.05);
+            border-left: 5px solid var(--primary-color);
+            color: rgb(99, 57, 9);
+        }
+
+        .card h3 {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* 表單群組 */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 9px;
+            border: 2px solid #c9b3b385;
+            border-radius: 10px;
+            font-size: 0.9rem;
+        }
+
         /* 主要按鈕 */
         .btn {
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
@@ -249,6 +231,26 @@
             color: white;
             border-color: var(--secondary-color);
             font-weight: bold;
+        }
+
+        /* 文字輸入區域 */
+        .textarea {
+            width: 100%;
+            min-height: 130px;
+            max-height: 190px;
+            padding: 15px;
+            border: 1px solid #775353;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            resize: none;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+
+        .textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
         }
 
         /* --- 滾動條 --- */
@@ -482,21 +484,29 @@
             gap: 30px;
         }
 
-        /* 打卡頁卡片樣式覆蓋 (繼承 .card) */
+        /* 打卡頁卡片 */
+        #attendance-tracker-section .settings-tracker,
+        #attendance-tracker-section .status-tracker,
+        #attendance-tracker-section .data-management-tracker,
+        #attendance-tracker-section .records-tracker,
+        #attendance-tracker-section .charts-section {
+            margin-bottom: 0;
+        }
+
         #attendance-tracker-section .settings-tracker {
-            background-color: #d4e2dab0; /* 與預設 .card 背景相同，可省略 */
+            background: #d4e2dab0;
+            padding: 15px;
+            border-radius: 10px;
         }
 
         #attendance-tracker-section .status-tracker,
         #attendance-tracker-section .records-tracker {
-            background-color: #fff7dc;
-            border-left-color: #dee678;
+            background: #fff7dc;
+            border-left: 5px solid #dee678;
+            padding: 15px;
+            border-radius: 10px;
         }
 
-        #attendance-tracker-section .charts-section .card {
-            background-color: #d4e2dab0;
-        }
-        
         #attendance-tracker-section h3 {
             color: rgb(99, 57, 9);
         }
@@ -565,6 +575,12 @@
             gap: 20px;
         }
 
+        #attendance-tracker-section .chart-container {
+            background: #d4e2dab0;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
         #attendance-tracker-section .chart-container h3 {
             margin-bottom: 15px;
             text-align: center;
@@ -622,13 +638,12 @@
             transform: translateY(-2px);
         }
 
-        /* 時間安排卡片樣式覆蓋 */
         #time-quadrant-section .timeline-panel.card {
             border-left: none;
+            box-shadow: 0 5px 15px rgba(14, 48, 24, 0.1);
         }
 
-        #time-quadrant-section .tools-panel .card,
-        .tools-panel-card-style {
+        #time-quadrant-section .tools-panel .card {
             background: #fff7dc;
             border-left-color: #dee678;
         }
@@ -777,6 +792,16 @@
             opacity: 0.6;
         }
 
+        .task-item.completed {
+            background: rgba(150, 150, 150, 0.25) !important;
+            border-left-color: rgba(150, 150, 150, 0.8) !important;
+        }
+
+        .task-item.completed .task-content-display {
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+
         .task-header {
             display: flex;
             align-items: flex-start;
@@ -851,6 +876,11 @@
             background: rgba(0, 0, 0, 0.4);
         }
 
+        .task-item:hover {
+            transform: scale(1.01);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
         .task-item[data-quadrant="A"] {
             background: rgba(239, 68, 68, 0.25);
             border-left: 4px solid rgba(239, 68, 68, 0.8);
@@ -879,6 +909,11 @@
             opacity: 0.8;
         }
 
+        .task-item .task-content-display {
+            font-size: 0.95em;
+            font-weight: 500;
+        }
+
         /* 時長標籤 */
         .task-duration-badge {
             position: absolute;
@@ -893,6 +928,7 @@
         }
 
         /* 時長按紐 */
+
         .btn-duration-adjust {
             background-color: #e0e7e2;
             border: 1px solid #c0ccc5;
@@ -967,6 +1003,11 @@
         }
 
         /* 四象限提醒卡片 */
+        .quadrant-info-card {
+            display: grid;
+            width: 400px;
+        }
+
         .quadrant-info-card .matrix-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -975,14 +1016,13 @@
         }
 
         .quadrant-info-card .quadrant {
-            padding: 15px; /* 使用較小的 padding */
+            border-radius: 12px;
+            padding: 15px;
             min-height: 180px;
             display: flex;
             flex-direction: column;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); /* 使用較輕的陰影 */
-            border-radius: 12px; /* 使用較小的圓角 */
-            border-left: none; /* 移除象限卡片的左邊框 */
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
         }
 
         .quadrant-info-card .quadrant:hover {
@@ -1060,6 +1100,11 @@
             transform: scale(1.1);
         }
 
+        .tools-panel-card-style {
+            background: #fff7dc;
+            border-left-color: #dee678 !important;
+        }
+
         /* 四象限顏色 */
         .quadrant-a {
             background-color: rgba(255, 215, 209, 0.8);
@@ -1104,9 +1149,10 @@
         }
 
         /* --- 6. 習慣培養 Habit Tracker --- */
-        /* 習慣培養頁面卡片樣式覆蓋 (繼承 .card) */
+        /* 習慣培養頁面特定樣式 */
         #habit-tracker-section .main-column .card {
             border-left: none;
+            box-shadow: 0 5px 15px rgba(14, 48, 24, 0.1);
         }
 
         #habit-tracker-section .side-column .card {
@@ -1120,8 +1166,7 @@
             padding: 15px;
             border-radius: 10px;
             margin-bottom: 15px;
-            border-left: 5px solid; /* 顏色由 JS 動態添加 */
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05); /* 添加輕微陰影 */
+            border-left: 5px solid;
         }
 
         .habit-main-row {
@@ -1371,14 +1416,16 @@
             color: white;
         }
 
-        /* 回顧項目 (繼承 .card) */
+        /* 回顧項目 */
         .review-entry {
+            margin-top: 15px;
+            padding: 15px;
             background: #f9f9f9;
+            border-radius: 10px;
             border-left: 4px solid var(--secondary-color);
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-top: 15px;
         }
 
         .review-entry-actions {
@@ -1407,8 +1454,7 @@
         #review-content .review-entry div ol {
             padding-left: 25px;
         }
-        
-        /* 每日摘要卡片 (繼承 .card) */
+
         #daily-summary-card {
             border-left: none;
             background: rgba(241, 239, 218, 0.75);
@@ -1431,7 +1477,7 @@
             margin-bottom: 12px;
         }
 
-        #review-stats-section .single-column-layout > .card {
+        #review-stats-section .single-column-layout>.card {
             border-left: none;
         }
 
@@ -1549,9 +1595,14 @@
             max-width: 1300px;
         }
 
+        #tag-search-content {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
         #global-search-results .review-entry {
             font-size: 0.9rem;
-            padding: 20px; /* 搜尋結果中的回顧項目 padding 稍小 */
+            padding: 20px;
         }
 
         #global-search-results .review-entry strong {
@@ -1831,6 +1882,11 @@
             color: rgb(63, 37, 7);
         }
 
+        #ai-chat-window .chat-input {
+            padding: 15px;
+            border-top: 1px solid rgba(99, 57, 9, 0.1);
+        }
+
         /* 新訊息通知 */
         #ai-chat-notification {
             position: absolute;
@@ -1910,7 +1966,6 @@
         }
 
         .chat-input {
-            font-size: 0.9rem;
             display: flex;
             gap: 10px;
             align-items: flex-end;
