@@ -363,6 +363,7 @@ const AttendanceTracker = {
     reminderTimeout: null,
     breakReminderTimeout: null,
     notificationPermission: 'default',
+    appNotificationsEnabled: true,
 
     async init() {
         this.injectHTML();
@@ -398,7 +399,7 @@ const AttendanceTracker = {
                                     <div id="notificationPermission" class="notification-permission"></div>
                                     <div class="setting-row"><label>工作時數:</label><input type="number" id="workHours" value="8" min="1" max="24" onchange="AttendanceTracker.saveSettings()"><span>小時</span></div>
                                     <div class="setting-row"><label>休息時間:</label><input type="number" id="breakMinutes" value="15" min="1" max="120" onchange="AttendanceTracker.saveSettings()"><span>分鐘</span></div>
-                                    <div class="setting-row"><label><input type="checkbox" id="enableNotifications" checked onchange="AttendanceTracker.saveSettings()"> 啟用桌面通知</label><label><input type="checkbox" id="enableSound" checked onchange="AttendanceTracker.saveSettings()"> 啟用提醒音效</label></div>
+                                    <div class="setting-row"><label><input type="checkbox" id="enableSound" checked onchange="AttendanceTracker.saveSettings()"> 啟用提醒音效</label></div>
                                 </div>
                                 <div class="charts-section">
                                     <div class="chart-container"><h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /><path d="M7 3v4h4" /><path d="M9 17l0 4" /><path d="M17 14l0 7" /><path d="M13 13l0 8" /><path d="M21 12l0 9" />
@@ -441,8 +442,12 @@ const AttendanceTracker = {
         if ('Notification' in window) {
             this.notificationPermission = Notification.permission;
             if (this.notificationPermission === 'granted') {
-                permissionDiv.innerHTML = '<span>✅ 桌面通知已啟用</span>';
-                permissionDiv.classList.add('permission-granted');
+                if (this.appNotificationsEnabled) {
+                    permissionDiv.innerHTML = '<span>✅ 桌面通知已啟用</span><button onclick="AttendanceTracker.toggleAppNotifications(false)" style="margin-left: 10px; cursor: pointer;">關閉通知</button>';
+                    permissionDiv.classList.add('permission-granted');
+                } else {
+                    permissionDiv.innerHTML = '<span>🔕 桌面通知已由您手動關閉</span><button onclick="AttendanceTracker.toggleAppNotifications(true)" style="margin-left: 10px; cursor: pointer;">重新啟用</button>';
+                }
             } else if (this.notificationPermission === 'denied') {
                 permissionDiv.innerHTML = '<span>❌ 桌面通知已被拒絕，請在瀏覽器設定中手動啟用</span>';
                 permissionDiv.classList.add('permission-denied');
@@ -454,18 +459,26 @@ const AttendanceTracker = {
         }
     },
 
+    async toggleAppNotifications(enable) {
+        this.appNotificationsEnabled = enable;
+        await this.saveSettings();
+        this.checkNotificationPermission();
+    },
+
     requestNotificationPermission() {
-        Notification.requestPermission().then(permission => {
+        Notification.requestPermission().then(async permission => {
             this.notificationPermission = permission;
-            this.checkNotificationPermission();
             if (permission === 'granted') {
+                this.appNotificationsEnabled = true;
+                await this.saveSettings();
                 this.showNotification('通知啟用成功', '你現在可以收到打卡提醒通知了！', 'success');
             }
+            this.checkNotificationPermission();
         });
     },
 
     showNotification(title, body, type = 'info') {
-        if (!document.getElementById('enableNotifications')?.checked) return;
+        if (!this.appNotificationsEnabled) return;
         if ('Notification' in window && Notification.permission === 'granted') {
             const notification = new Notification(title, { body: body, icon: 'https://cdn.discordapp.com/attachments/1345376114272505918/1402580818563567626/ICON1.png?ex=68946ead&is=68931d2d&hm=51bc4c8f5df4bfa1d772dc2af2aa972cda9fd204c61665d1b20353c190f859d7&' });
             if (document.getElementById('enableSound')?.checked) this.playNotificationSound();
@@ -519,7 +532,7 @@ const AttendanceTracker = {
                 break;
             case 'work-out':
                 if (this.currentStatus === 'working') {
-                    const workDuration = await this.calculateWorkTime(); // 加上 await
+                    const workDuration = await this.calculateWorkTime();
                     this.showNotification('下工打卡成功', `今日工作時長：${this.formatDuration(workDuration)}`, 'success');
                 }
                 this.currentStatus = 'idle';
@@ -573,9 +586,8 @@ const AttendanceTracker = {
         const now = new Date();
         const workTime = now.getTime() - this.workStartTime.getTime();
 
-        // 建立一筆新的工作時長記錄並存入 IndexedDB
         const workRecord = {
-            date: new Date().toISOString().split('T')[0], // 使用 YYYY-MM-DD 格式
+            date: new Date().toISOString().split('T')[0],
             duration: workTime
         };
         await DBHelper.put('workTimeRecords', workRecord);
@@ -695,7 +707,7 @@ const AttendanceTracker = {
         const settings = {
             workHours: document.getElementById('workHours').value,
             breakMinutes: document.getElementById('breakMinutes').value,
-            enableNotifications: document.getElementById('enableNotifications').checked,
+            appNotificationsEnabled: this.appNotificationsEnabled,
             enableSound: document.getElementById('enableSound').checked,
         };
         await DBHelper.put('appState', { key: 'trackerSettings', value: settings });
@@ -706,7 +718,7 @@ const AttendanceTracker = {
         if (document.getElementById('workHours')) {
             document.getElementById('workHours').value = settings?.value.workHours || 8;
             document.getElementById('breakMinutes').value = settings?.value.breakMinutes || 15;
-            document.getElementById('enableNotifications').checked = settings?.value.enableNotifications !== false;
+            this.appNotificationsEnabled = settings?.value.appNotificationsEnabled !== false;
             document.getElementById('enableSound').checked = settings?.value.enableSound !== false;
         }
     },
