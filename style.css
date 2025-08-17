@@ -1402,7 +1402,7 @@
     /* 釘選筆記 */
     #pinned-notes-content {
         max-width: auto;
-        height: 500px;
+        max-height: 500px;
         overflow-y: auto;
         padding-right: 10px;
         word-break: break-word;
