@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>生活觀察</title>
-    
+
     <link rel="manifest" href="manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,7 +18,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Chocolate+Classical+Sans&display=swap" rel="stylesheet">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -29,7 +29,7 @@
 
 <body>
     <div class="container">
-        <div class="sidebar">
+        <div class="grainy-effect sidebar">
             <div class="sidebar-header">
                 <h2><svg xmlns="http://www.w3.org/2000/svg" class="sidebar-Dashboard" viewBox="0 0 24 24"
                         stroke-width="2" stroke="currentColor" fill="currentColor" stroke-linecap="round"
@@ -94,6 +94,15 @@
                                 d="M17 8v-3a1 1 0 0 0 -1 -1h-10a2 2 0 0 0 0 4h12a1 1 0 0 1 1 1v3m0 4v3a1 1 0 0 1 -1 1h-12a2 2 0 0 1 -2 -2v-12" />
                             <path d="M20 12v4h-4a2 2 0 0 1 0 -4h4" />
                         </svg><span class="menu-item-text">綜合統計</span></a></li>
+                <li><a href="#" onclick="showSection('image-memory')"><svg xmlns="http://www.w3.org/2000/svg"
+                            class="sidebar-icon" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                            <path d="M15 8h.01" />
+                            <path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12z" />
+                            <path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" />
+                            <path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l2 2" />
+                        </svg><span class="menu-item-text">圖像記憶</span></a></li>
                 <li><a href="#" onclick="showSection('data-settings')"><svg xmlns="http://www.w3.org/2000/svg"
                             class="sidebar-icon" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
                             stroke-linecap="round" stroke-linejoin="round">
@@ -102,13 +111,6 @@
                                 d="M14.647 4.081a.724 .724 0 0 0 1.08 .448c2.439 -1.485 5.23 1.305 3.745 3.744a.724 .724 0 0 0 .447 1.08c2.775 .673 2.775 4.62 0 5.294a.724 .724 0 0 0 -.448 1.08c1.485 2.439 -1.305 5.23 -3.744 3.745a.724 .724 0 0 0 -1.08 .447c-.673 2.775 -4.62 2.775 -5.294 0a.724 .724 0 0 0 -1.08 -.448c-2.439 1.485 -5.23 -1.305 -3.745 -3.744a.724 .724 0 0 0 -.447 -1.08c-2.775 -.673 -2.775 -4.62 0 -5.294a.724 .724 0 0 0 .448 -1.08c-1.485 -2.439 1.305 -5.23 3.744 -3.745a.722 .722 0 0 0 1.08 -.447c.673 -2.775 4.62 -2.775 5.294 0zm-2.647 4.919a3 3 0 1 0 0 6a3 3 0 0 0 0 -6z"
                                 stroke-width="0" fill="currentColor" />
                         </svg><span class="menu-item-text">資料管理</span></a></li>
-                <li><a href="#" onclick="showSection('search')"><svg xmlns="http://www.w3.org/2000/svg"
-                            class="sidebar-icon" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
-                            stroke-linecap="round" stroke-linejoin="round">
-                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                            <path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" />
-                            <path d="M21 21l-6 -6" />
-                        </svg><span class="menu-item-text">全局搜尋</span></a></li>
             </ul>
         </div>
 
@@ -121,12 +123,150 @@
             <!-- ======================= 內容區域 ======================= -->
 
             <!-- 1. 打卡記錄 -->
-            <div id="attendance-tracker-section" class="content-section hidden"></div>
+            <div id="attendance-tracker-section" class="content-section hidden">
+                <div class="punch-section">
+                    <div class="punch-buttons">
+                        <button class="punch-btn work-in" id="workInBtn"
+                            onclick="AttendanceTracker.punchCard('work-in')"><svg xmlns="http://www.w3.org/2000/svg"
+                                class="content-icon" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                                fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path d="M6.5 7h11" />
+                                <path d="M6.5 17h11" />
+                                <path d="M6 20v-2a6 6 0 1 1 12 0v2a1 1 0 0 1 -1 1h-10a1 1 0 0 1 -1 -1z" />
+                                <path d="M6 4v2a6 6 0 1 0 12 0v-2a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1z" />
+                            </svg>上工打卡</button>
+                        <button class="punch-btn work-out" id="workOutBtn"
+                            onclick="AttendanceTracker.punchCard('work-out')"><svg xmlns="http://www.w3.org/2000/svg"
+                                class="content-icon" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                                fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path d="M18 18v2a1 1 0 0 1 -1 1h-10a1 1 0 0 1 -1 -1v-2a6 6 0 0 1 6 -6" />
+                                <path d="M6 6a6 6 0 0 0 6 6m3.13 -.88a6 6 0 0 0 2.87 -5.12v-2a1 1 0 0 0 -1 -1h-10" />
+                                <path d="M3 3l18 18" />
+                            </svg>下工打卡</button>
+                        <button class="punch-btn break-start" id="breakStartBtn"
+                            onclick="AttendanceTracker.punchCard('break-start')"><svg xmlns="http://www.w3.org/2000/svg"
+                                class="content-icon" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                                fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path
+                                    d="M4 11h16a1 1 0 0 1 1 1v.5c0 1.5 -2.517 5.573 -4 6.5v1a1 1 0 0 1 -1 1h-8a1 1 0 0 1 -1 -1v-1c-1.687 -1.054 -4 -5 -4 -6.5v-.5a1 1 0 0 1 1 -1z" />
+                                <path d="M12 4a2.4 2.4 0 0 0 -1 2a2.4 2.4 0 0 0 1 2" />
+                                <path d="M16 4a2.4 2.4 0 0 0 -1 2a2.4 2.4 0 0 0 1 2" />
+                                <path d="M8 4a2.4 2.4 0 0 0 -1 2a2.4 2.4 0 0 0 1 2" />
+                            </svg>中場休息</button>
+                        <button class="punch-btn break-end" id="breakEndBtn"
+                            onclick="AttendanceTracker.punchCard('break-end')"><svg xmlns="http://www.w3.org/2000/svg"
+                                class="content-icon" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                                fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path d="M3 19h16" />
+                                <path
+                                    d="M15 11h6c0 1.691 -.525 3.26 -1.42 4.552m-2.034 2.032a7.963 7.963 0 0 1 -4.546 1.416h-2a8 8 0 0 1 -8 -8h8" />
+                                <path d="M12 5v3" />
+                                <path d="M15 5v3" />
+                                <path d="M3 3l18 18" />
+                            </svg>結束休息</button>
+                    </div>
+                </div>
+                <div class="tracker-main-grid">
+                    <div class="tracker-grid-left">
+                        <div class="card-1 grainy-effect card particles">
+                            <h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" stroke-width="2"
+                                    stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                    <path
+                                        d="M13.256 20.473c-.855 .907 -2.583 .643 -2.931 -.79a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.07 .26 1.488 1.29 1.254 2.15" />
+                                    <path d="M19 16l-2 3h4l-2 3" />
+                                    <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
+                                </svg>提醒設定</h3>
+                            <div id="notificationPermission" class="notification-permission"></div>
+                            <div class="setting-row">
+                                <label for="workHours">工作時數:</label>
+                                <input type="number" class="input-field-Details input-short" id="workHours" value="8"
+                                    min="1" max="24" onchange="AttendanceTracker.saveSettings()">
+                                <span>小時</span>
+                            </div>
+                            <div class="setting-row">
+                                <label for="breakMinutes">休息時間:</label>
+                                <input type="number" class="input-field-Details input-short" id="breakMinutes"
+                                    value="15" min="1" max="120" onchange="AttendanceTracker.saveSettings()">
+                                <span>分鐘</span>
+                            </div>
+                            <div class="setting-row">
+                                <label>
+                                    <input type="checkbox" id="enableSound" checked
+                                        onchange="AttendanceTracker.saveSettings()">
+                                    啟用提醒音效
+                                </label>
+                            </div>
+                        </div>
+                        <div class="charts-section">
+                            <div class="card-1 grainy-effect chart-container card particles">
+                                <h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
+                                        stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                        <path d="M7 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" />
+                                        <path d="M7 3v4h4" />
+                                        <path d="M9 17l0 4" />
+                                        <path d="M17 14l0 7" />
+                                        <path d="M13 13l0 8" />
+                                        <path d="M21 12l0 9" />
+                                    </svg>本週工作時數</h3>
+                                <canvas id="weekChart" width="400" height="200"></canvas>
+                            </div>
+                            <div class="card-1 grainy-effect chart-container card particles">
+                                <h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
+                                        stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                        <path d="M3 3v18h18" />
+                                        <path d="M20 18v3" />
+                                        <path d="M16 16v5" />
+                                        <path d="M12 13v8" />
+                                        <path d="M8 16v5" />
+                                        <path d="M3 11c6 0 5 -5 9 -5s3 5 9 5" />
+                                    </svg>本月工作時數</h3>
+                                <canvas id="monthChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tracker-grid-right">
+                        <div class="card-2 grainy-effect card particles">
+                            <h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" stroke-width="2"
+                                    stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                    <path d="M20.984 12.53a9 9 0 1 0 -7.552 8.355" />
+                                    <path d="M12 7v5l3 3" />
+                                    <path d="M19 16l-2 3h4l-2 3" />
+                                </svg>當前狀態</h3>
+                            <div id="statusContent">尚未打卡</div>
+                        </div>
+                        <div class="grainy-effect card particles card-2" style="display: flex; flex-direction: column;">
+                            <h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
+                                    stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                    <path d="M9 6l11 0" />
+                                    <path d="M9 12l11 0" />
+                                    <path d="M9 18l11 0" />
+                                    <path d="M5 6l0 .01" />
+                                    <path d="M5 12l0 .01" />
+                                    <path d="M5 18l0 .01" />
+                                </svg>最近記錄</h3>
+                            <div id="recordsList"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- 2. 時間安排 -->
             <div id="time-quadrant-section" class="content-section hidden">
                 <div class="time-schedule-grid">
-                    <div class="timeline-panel card">
+                    <div class="card-1 particles grainy-effect timeline-panel card">
                         <div class="timeline-header">
                             <button id="prev-day-btn" class="date-nav">‹</button>
                             <label style="cursor: pointer;">
@@ -138,7 +278,7 @@
                         </div>
                     </div>
                     <div class="tools-panel" style="display: flex; flex-direction: column; gap: 20px;">
-                        <div class="quadrant-info-card card tools-panel-card-style">
+                        <div class="card-2 particles quadrant-info-card card tools-panel-card-style grainy-effect">
                             <h3 style="margin-top:0;"><svg xmlns="http://www.w3.org/2000/svg" class="content-icon"
                                     viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
                                     stroke-linecap="round" stroke-linejoin="round">
@@ -151,7 +291,7 @@
                             <div class="matrix-grid" id="eisenhower-matrix-container">
                             </div>
                         </div>
-                        <div class="statistics card">
+                        <div class="card-2 grainy-effect card particles">
                             <h3 style="margin-top:0;"><svg xmlns="http://www.w3.org/2000/svg" class="content-icon"
                                     viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
                                     stroke-linecap="round" stroke-linejoin="round">
@@ -165,13 +305,10 @@
                                 </svg>本日完成統計</h3>
                             <div class="chart-container"
                                 style="display: flex; justify-content: center; align-items: center; min-height: 200px; position: relative;">
-                                <canvas id="daily-pie-chart" style="max-width: 200px; max-height: 200px;"></canvas>
-                                <p id="daily-stats-text" style="color: #888; position: absolute; text-align: center;">
-                                    完成任務後<br>將顯示分析圖表</p>
+                                <div id="daily-pie-chart-container" class="pie-chart-container"></div>
                             </div>
                         </div>
-
-                        <div class="statistics card">
+                        <div class="card-2 grainy-effect card particles">
                             <h3 style="margin-top:0;"><svg xmlns="http://www.w3.org/2000/svg" class="content-icon"
                                     viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
                                     stroke-linecap="round" stroke-linejoin="round">
@@ -185,72 +322,18 @@
                                 </svg>本月完成統計</h3>
                             <div class="chart-container"
                                 style="display: flex; justify-content: center; align-items: center; min-height: 200px; position: relative;">
-                                <canvas id="monthly-pie-chart" style="max-width: 200px; max-height: 200px;"></canvas>
-                                <p id="monthly-stats-text" style="color: #888; position: absolute; text-align: center;">
-                                    完成任務後<br>將顯示分析圖表</p>
+                                <div id="monthly-pie-chart-container" class="pie-chart-container"></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div id="task-form-modal"
-                    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
-                    <div class="card" style="width: 90%; max-width: 400px;">
-                        <h3 id="form-title">新增任務</h3>
-                        <input type="hidden" id="task-id-input">
-                        <div class="form-group">
-                            <label>時間</label>
-                            <input type="text" id="task-time-input">
-                        </div>
-                        <div class="form-group">
-                            <label>內容</label>
-                            <textarea id="task-content-input" class="textarea" placeholder="輸入任務內容..."></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>時長 (分鐘)</label>
-                            <input type="number" id="task-duration-input" min="5" step="5" value="30">
-                            <div id="duration-adjust-buttons" style="margin-top: 8px; display: flex; gap: 8px;">
-                                <button type="button" class="btn-duration-adjust"
-                                    onclick="adjustDuration(15)">+15m</button>
-                                <button type="button" class="btn-duration-adjust"
-                                    onclick="adjustDuration(30)">+30m</button>
-                                <button type="button" class="btn-duration-adjust"
-                                    onclick="adjustDuration(60)">+1h</button>
-                                <button type="button" class="btn-duration-adjust"
-                                    onclick="adjustDuration(120)">+2h</button>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>選擇象限 (顏色)</label>
-                            <div id="color-selector" class="color-selector">
-                            </div>
-                        </div>
-                        <div class="form-group" id="recurring-task-section">
-                            <label>
-                                <input type="checkbox" id="recurring-task-checkbox"
-                                    onchange="document.getElementById('recurring-dates-container').style.display = this.checked ? 'block' : 'none'">
-                                新增到多個日期 (重複性任務)
-                            </label>
-                            <div id="recurring-dates-container" style="display: none; margin-top: 10px;">
-                                <label for="task-dates-input">選擇日期</label>
-                                <input type="text" id="task-dates-input" placeholder="點擊選擇一個或多個日期">
-                            </div>
-                        </div>
-                        <div style="text-align: right; display:flex; gap: 10px; justify-content: flex-end;">
-                            <button class="btn-delete" id="delete-task-btn"
-                                onclick="TimeQuadrantTracker.deleteTaskFromModal()"
-                                style="margin-right: auto; display: none;">🗑️</button>
-                            <button class="btn-save-unified" onclick="TimeQuadrantTracker.saveTask()">💾</button>
-                            <button class="btn-cancel-unified" onclick="TimeQuadrantTracker.closeTaskForm()">❌</button>
-                        </div>
-                    </div>
-                </div>
             </div>
             <!-- 3. 習慣培養 -->
             <div id="habit-tracker-section" class="content-section hidden">
                 <div class="content-grid">
                     <div class="main-column">
-                        <div class="card">
+                        <div class="card-1 grainy-effect card particles">
                             <h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
                                     stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
                                     stroke-linejoin="round">
@@ -265,7 +348,7 @@
                         </div>
                     </div>
                     <div class="side-column">
-                        <div class="card">
+                        <div class="card-2 grainy-effect card particles">
                             <h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
                                     stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
                                     stroke-linejoin="round">
@@ -278,7 +361,7 @@
                                 </svg>完成率報告</h3>
                             <div class="form-group">
                                 <label for="habit-report-period">選擇週期</label>
-                                <select id="habit-report-period" class="form-group select"
+                                <select id="habit-report-period" class="input-field-Details"
                                     onchange="HabitTracker.renderReportChart()">
                                     <option value="weekly">本週報告</option>
                                     <option value="monthly">本月報告</option>
@@ -286,7 +369,7 @@
                             </div>
                             <canvas id="habit-report-chart"></canvas>
                         </div>
-                        <div class="card">
+                        <div class="card-2 grainy-effect card particles">
                             <h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
                                     stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
                                     stroke-linejoin="round">
@@ -299,7 +382,8 @@
                             <div class="form-group">
                                 <label>想培養什麼新習慣呢？</label>
                                 <div style="display: flex; gap: 10px;">
-                                    <input type="text" id="new-habit-input" placeholder="例如：每日喝足 2000cc 的水">
+                                    <input type="text" class="input-field-Details" id="new-habit-input"
+                                        placeholder="例如：每日喝足 2000cc 的水">
                                     <button class="btn" onclick="HabitTracker.addHabit()"><svg
                                             xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
                                             stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
@@ -317,10 +401,25 @@
                 </div>
             </div>
             <!-- 4. 心情筆記 -->
-            <div id="mood-entry-section" class="content-section">
+            <div id="mood-entry-section" class="content-section hidden">
                 <div class="content-grid">
                     <div class="main-column">
-                        <div class="card">
+                        <div class="card-1 grainy-effect card particles" id="pinned-notes-card">
+                            <h3>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
+                                    stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                    <path d="M9 4v6l-2 4v2h10v-2l-2 -4v-6" />
+                                    <line x1="12" y1="16" x2="12" y2="21" />
+                                    <line x1="8" y1="4" x2="16" y2="4" />
+                                </svg>釘選筆記
+                            </h3>
+                            <div id="pinned-notes-content">
+                                <p>沒有釘選的筆記。</p>
+                            </div>
+                        </div>
+                        <div class="card-1 grainy-effect card particles">
                             <h3>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
                                     stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
@@ -337,7 +436,7 @@
                             <div class="form-group">
                                 <label>筆記類型</label>
                                 <div id="note-type-selector" style="display: flex; gap: 10px;">
-                                    <button class="btn-pin active" data-type="morning">☀️ 起床</button>
+                                    <button class="btn-pin active " data-type="morning">☀️ 起床</button>
                                     <button class="btn-pin" data-type="evening">🌙 睡前</button>
                                     <button class="btn-pin" data-type="note">📝 筆記</button>
                                 </div>
@@ -348,8 +447,28 @@
                             </div>
                             <div class="form-group">
                                 <label>筆記內容</label>
-                                <textarea class="textarea" id="general-mood-content" placeholder="記錄你的想法、夢境、待辦事項..."
-                                    style="font-size: 0.9rem;"></textarea>
+                                <textarea id="general-mood-content" class="input-field"
+                                    placeholder="記錄你的想法、夢境、待辦事項..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <input type="file" id="general-mood-image" accept="image/*" style="display: none;">
+                                <button class="btn" onclick="document.getElementById('general-mood-image').click()"
+                                    style="background: #a5a5a5; padding: 10px 15px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                        stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                                        stroke-linejoin="round" style="vertical-align: -5px;">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                        <path d="M15 8h.01" />
+                                        <path d="M13 21h-7a3 3 0 0 1 -3 -3v-12a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v7" />
+                                        <path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" />
+                                        <path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l2 2" />
+                                        <path d="M19 19m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
+                                        <path d="M17 19l4 0" />
+                                        <path d="M19 17l0 4" />
+                                    </svg>
+                                    附加圖片
+                                </button>
+                                <div id="general-mood-image-preview" style="margin-top: 15px;"></div>
                             </div>
                             <button class="btn" onclick="MoodTracker.saveGeneralEntry()">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
@@ -362,7 +481,27 @@
                                 </svg>
                             </button>
                         </div>
-                        <div class="card">
+                    </div>
+                    <div class="side-column ">
+                        <div class="card-1 grainy-effect card particles">
+                            <h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
+                                    stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                    <path d="M3 12h1" />
+                                    <path d="M12 3v1" />
+                                    <path d="M20 12h1" />
+                                    <path d="M5.6 5.6l.7 .7" />
+                                    <path d="M18.4 5.6l-.7 .7" />
+                                    <path d="M8 12a4 4 0 1 1 8 0" />
+                                    <path d="M3 16h18" />
+                                    <path d="M3 20h18" />
+                                </svg>昨日回顧</h3>
+                            <div id="yesterday-review">
+                                <p>暫無昨日記錄</p>
+                            </div>
+                        </div>
+                        <div class="card-1 grainy-effect card particles">
                             <h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
                                     stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
                                     stroke-linejoin="round">
@@ -375,8 +514,8 @@
                             <div class="form-group">
                                 <label>新增自訂標籤</label>
                                 <div style="display: flex; gap: 10px;">
-                                    <input type="text" id="custom-tag-input" placeholder="輸入新標籤"
-                                        style="font-size: 0.9rem;">
+                                    <input type="text" class="input-field-Details" id="custom-tag-input"
+                                        placeholder="輸入新標籤">
                                     <button class="btn" onclick="MoodTracker.addCustomTag()"><svg
                                             xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
                                             stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
@@ -397,48 +536,12 @@
                             </div>
                         </div>
                     </div>
-                    <div class="side-column">
-                        <div class="card" id="pinned-notes-card">
-                            <h3>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
-                                    stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
-                                    stroke-linejoin="round">
-                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                    <path d="M9 4v6l-2 4v2h10v-2l-2 -4v-6" />
-                                    <line x1="12" y1="16" x2="12" y2="21" />
-                                    <line x1="8" y1="4" x2="16" y2="4" />
-                                </svg>釘選筆記
-                            </h3>
-                            <div id="pinned-notes-content">
-                                <p>沒有釘選的筆記。</p>
-                            </div>
-                        </div>
-                        <div class="card">
-                            <h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
-                                    stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
-                                    stroke-linejoin="round">
-                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                    <path d="M3 12h1" />
-                                    <path d="M12 3v1" />
-                                    <path d="M20 12h1" />
-                                    <path d="M5.6 5.6l.7 .7" />
-                                    <path d="M18.4 5.6l-.7 .7" />
-                                    <path d="M8 12a4 4 0 1 1 8 0" />
-                                    <path d="M3 16h18" />
-                                    <path d="M3 20h18" />
-                                </svg>昨日回顧</h3>
-                            <div id="yesterday-review">
-                                <p>暫無昨日記錄</p>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
-
             <!-- 5. 綜合統計 -->
             <div id="review-stats-section" class="content-section hidden">
                 <div class="single-column-layout">
-                    <div class="card">
+                    <div class="card-1 grainy-effect card particles">
                         <h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
                                 stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
                                 stroke-linejoin="round">
@@ -453,10 +556,11 @@
                         <div class="form-group"
                             style="display: flex; gap: 10px; margin-top: 20px; align-items: center;">
                             <label for="review-month">選擇月份：</label>
-                            <input type="month" id="review-month" class="form-control">
+                            <input type="month" id="review-month" class="input-field-Details">
                         </div>
                         <div id="calendar-view"></div>
-                        <div id="daily-summary-card" class="card" style="display: none; margin-top: 20px;">
+                        <div id="daily-summary-card" class="card-2 grainy-effect"
+                            style="display: none; margin-top: 20px;">
                             <h3>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
                                     stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
@@ -479,7 +583,7 @@
                             <p>請從上方月曆選擇日期查看記錄。</p>
                         </div>
                     </div>
-                    <div class="card">
+                    <div class="card-2 grainy-effect card particles">
                         <h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
                                 stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
                                 stroke-linejoin="round">
@@ -496,10 +600,31 @@
 
                 </div>
             </div>
-            <!-- 6. 資料設定 -->
+            <!-- 6. 圖像記憶 -->
+            <div id="image-memory-section" class="content-section hidden">
+                <div class="single-column-layout">
+                    <div class="card-1 grainy-effect card particles">
+                        <h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
+                                stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                <path d="M15 8h.01"></path>
+                                <path
+                                    d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12z">
+                                </path>
+                                <path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5"></path>
+                                <path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l2 2"></path>
+                            </svg>圖像記憶</h3>
+                        <p>這裡會顯示所有你在筆記中上傳過的圖片。</p>
+                        <div id="image-gallery-container" style="margin-top: 20px;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 7. 資料設定 -->
             <div id="data-settings-section" class="content-section hidden">
                 <div class="single-column-layout">
-                    <div class="card" style="margin-top: 20px;">
+                    <div class="card-1 grainy-effect card particles" style="margin-top: 20px;">
                         <h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
                                 stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
                                 stroke-linejoin="round">
@@ -515,10 +640,9 @@
                         <div class="form-group">
                             <label>選擇已儲存的 API Key</label>
                             <div style="display: flex; gap: 10px;">
-                                <select id="api-key-select" class="form-group select"
-                                    style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;"></select>
+                                <select id="api-key-select" class="input-field-Details"></select>
                                 <button class="btn-delete" id="delete-api-key-btn"><svg
-                                        xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                        xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
                                         stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
                                         stroke-linejoin="round">
                                         <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -535,11 +659,13 @@
                         <h5>新增 API Key</h5>
                         <div class="form-group">
                             <label>Key 的名稱</label>
-                            <input type="text" id="new-api-key-name" placeholder="給你的 Key 一個好記的名字">
+                            <input type="text" class="input-field-Details" id="new-api-key-name"
+                                placeholder="給你的 Key 一個好記的名字">
                         </div>
                         <div class="form-group">
                             <label>API Key</label>
-                            <input type="password" id="new-api-key-value" placeholder="請輸入你的 AI API Key">
+                            <input type="password" class="input-field-Details" id="new-api-key-value"
+                                placeholder="請輸入你的 AI API Key">
                         </div>
                         <button class="btn" id="add-api-key-btn"><svg xmlns="http://www.w3.org/2000/svg"
                                 class="content-icon" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
@@ -553,7 +679,7 @@
                         <h5>其他 AI 設定</h5>
                         <div class="form-group">
                             <label>模型選擇</label>
-                            <select id="ai-model-select" class="form-group select"
+                            <select id="ai-model-select" class="input-field-Details"
                                 style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
                                 <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
                                 <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
@@ -565,18 +691,21 @@
                         </div>
                         <div class="form-group">
                             <label>記憶對話數</label>
-                            <input type="number" id="context-length" class="form-group input" value="10" min="0"
+                            <input type="number" id="context-length" class="input-field-Details" value="10" min="0"
                                 max="50"
                                 style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
                         </div>
                         <div class="form-group">
                             <label>記憶幾日資料</label>
-                            <input type="number" id="ai-data-days" class="form-group input" value="1" min="1" max="30"
-                                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                            <input type="number" id="ai-data-days" class="input-field-Details" value="1" min="1"
+                                max="30">
                         </div>
                         <div class="form-group">
                             <label>提示詞</label>
-                            <textarea class="textarea" id="ai-prompt" rows="5"></textarea>
+                            <small style="padding: 6px 0px; font-size: 0.8rem; margin-top: 5px; display: block;">
+                                記憶資料捕捉的巨集為心情數據={{mood}}；習慣數據={{habits}}；時間安排={{schedule}}
+                            </small>
+                            <textarea class="input-field" id="ai-prompt" rows="5"></textarea>
                         </div>
                         <button class="btn" onclick="MoodTracker.saveSettings()">
                             <svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
@@ -589,7 +718,7 @@
                             </svg>
                         </button>
                     </div>
-                    <div class="card" style="margin-top: 20px;">
+                    <div class="card-1 grainy-effect card particles" style="margin-top: 20px;">
                         <h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
                                 stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
                                 stroke-linejoin="round">
@@ -612,7 +741,7 @@
                         <div class="data-management-container">
                             <div class="data-management-grid">
                                 <button class="data-management-btn export" onclick="DataManager.exportAllData()">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24"
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
                                         stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
                                         stroke-linejoin="round">
                                         <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -626,7 +755,7 @@
                                 </button>
                                 <button class="data-management-btn import"
                                     onclick="document.getElementById('import-all-data-file').click()">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24"
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
                                         stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
                                         stroke-linejoin="round">
                                         <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -639,7 +768,7 @@
                                     <span>匯入資料</span>
                                 </button>
                                 <button class="data-management-btn warning" onclick="FloatingAIChat.clearChatHistory()">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24"
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
                                         stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
                                         stroke-linejoin="round">
                                         <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -653,7 +782,7 @@
                                     <span>清除AI聊天</span>
                                 </button>
                                 <button class="data-management-btn danger" onclick="DataManager.clearAllData()">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24"
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
                                         stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
                                         stroke-linejoin="round">
                                         <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -702,7 +831,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <input type="file" id="import-all-data-file" accept=".json" class="hidden"
                             onchange="DataManager.importAllData(event)">
                         <input type="file" id="import-mood-file" accept=".json" class="hidden"
@@ -716,95 +844,126 @@
                     </div>
                 </div>
             </div>
-            <div id="tag-search-results-section" class="content-section hidden">
-                <div class="card">
-                    <h3 id="tag-search-title">搜尋結果</h3>
-                    <div id="tag-search-content" style="max-height: 70vh; overflow-y: auto;">
-                    </div>
-                    <button class="btn" onclick="showSection('review-stats')" style="margin-top: 20px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+        </div>
+    </div>
+    </div>
+    </div>
+    <div id="image-modal" class="hidden">
+        <div class="modal-close-btn" onclick="ImageMemory.closeModal()">×</div>
+        <div class="card-1 grainy-effect">
+            <img id="modal-image" src="" style="max-width: 100%; max-height: 60vh; object-fit: contain;">
+            <div id="modal-note-content" style="margin-top: 20px; border-radius: 8px; overflow-y: auto;"></div>
+            <div id="modal-note-content" style="margin-top: 20px; border-radius: 8px; overflow-y: auto;">
+            </div>
+            <div class="card-2 modal-actions"
+                style="margin-top: 15px; text-align: right; display: flex; justify-content: flex-end; gap: 10px;">
+                <div class="view-mode-controls">
+                    <button id="edit-modal-note-btn" class="btn-pin">✏️</button>
+                    <button id="delete-modal-image-btn" class="btn-delete">🗑️</button>
+                </div>
+                <div class="edit-mode-controls hidden">
+                    <button id="save-modal-note-btn" class="btn-save-unified">💾</button>
+                    <button id="cancel-modal-note-btn" class="btn-cancel-unified">❌</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="global-search-container">
+        <div id="global-search-window" class="hidden">
+            <button class="modal-close-btn" onclick="FloatingSearch.closeWindow()">×</button>
+            <div class="card-1 search-overlay-content grainy-effect card particles">
+                <h3 id="search-window-title">全局搜尋</h3>
+                <div class="search-input-area">
+                    <input type="search" id="floating-search-input" placeholder="搜尋筆記、任務...">
+                    <button id="floating-search-btn" class="btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
                             stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
-                            stroke-linejoin="round" style="vertical-align: middle; margin-right: 5px;">
-                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                            <path d="M9 14l-4 -4l4 -4" />
-                            <path d="M5 10h11a4 4 0 1 1 0 8h-1" />
+                            stroke-linejoin="round">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                            <path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"></path>
+                            <path d="M21 21l-6 -6"></path>
                         </svg>
-                        返回月曆回顧
                     </button>
                 </div>
-            </div>
-            <div id="search-section" class="content-section hidden">
-                <div class="single-column-layout">
-                    <div class="card">
-                        <h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
-                                stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
-                                stroke-linejoin="round">
-                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                <path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" />
-                                <path d="M21 21l-6 -6" />
-                            </svg>全局搜尋</h3>
-                        <p>搜尋範圍包含：筆記內容、標籤、時間表任務。</p>
-                        <div class="form-group" style="display: flex; gap: 10px; margin-top: 20px;">
-                            <input type="search" id="global-search-input" class="form-group"
-                                style="width:100%; padding:10px;" placeholder="輸入關鍵字..."
-                                onkeypress="if(event.key === 'Enter') GlobalSearch.performSearch()">
-                            <button class="btn" onclick="GlobalSearch.performSearch()"><svg
-                                    xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24"
-                                    stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
-                                    stroke-linejoin="round">
-                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                    <path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" />
-                                    <path d="M7 10l6 0" />
-                                    <path d="M10 7l0 6" />
-                                    <path d="M21 21l-6 -6" />
-                                </svg></button>
-                        </div>
-                        <hr style="margin: 20px 0;">
-                        <div id="global-search-results" style="max-height: 60vh; overflow-y: auto;">
-                            <p>請輸入關鍵字以開始搜尋。</p>
-                        </div>
-                    </div>
+                <div id="floating-search-results">
+                    <p>請輸入關鍵字以開始搜尋。</p>
                 </div>
             </div>
         </div>
     </div>
-    </div>
-    <div id="ai-chat-container">
-        <div id="ai-chat-window" class="hidden">
-            <div class="chat-header">
-                <h3>AI 心情助手</h3>
-            </div>
-            <div class="chat-messages" id="ai-chat-messages">
-            </div>
-            <div class="chat-input-wrapper">
-                <div id="file-preview-container"></div>
-                <div class="chat-input">
-                    <button id="ai-chat-attach-btn" class="btn" style="padding: 12px 14px;"><svg
-                            xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                            stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
-                            stroke-linejoin="round">
-                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                            <path
-                                d="M15 7l-6.5 6.5a1.5 1.5 0 0 0 3 3l6.5 -6.5a3 3 0 0 0 -6 -6l-6.5 6.5a4.5 4.5 0 0 0 9 9l6.5 -6.5" />
-                        </svg></button>
-                    <input type="file" id="ai-chat-file-input" class="hidden">
-
-                    <textarea id="ai-chat-input" class="textarea" placeholder=""></textarea>
-
-                    <button id="ai-chat-send-btn" class="btn"><svg xmlns="http://www.w3.org/2000/svg"
-                            class="icon icon-tabler icon-tabler-send" width="20" height="20" viewBox="0 0 24 24"
-                            stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
-                            stroke-linejoin="round">
-                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                            <path d="M10 14l11 -11" />
-                            <path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5" />
-                        </svg></button>
-                </div>
+    <div id="ai-chat-window" class="hidden">
+        <div class="chat-header">
+            <h3>AI 心情助手</h3>
+        </div>
+        <div id="chat-context-menu" class="hidden">
+            <button id="ctx-copy-btn" title="複製"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                    viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                    <path d="M8 8m0 2a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2z" />
+                    <path d="M16 8v-2a2 2 0 0 0 -2 -2h-8a2 2 0 0 0 -2 2v8a2 2 0 0 0 2 2h2" />
+                </svg></button>
+            <button id="ctx-quote-btn" title="引用"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                    viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                    <path d="M10 11h-4a1 1 0 0 1 -1 -1v-3a1 1 0 0 1 1 -1h3a1 1 0 0 1 1 1v6c0 2.667 -1.333 4.333 -4 5" />
+                    <path d="M19 11h-4a1 1 0 0 1 -1 -1v-3a1 1 0 0 1 1 -1h3a1 1 0 0 1 1 1v6c0 2.667 -1.333 4.333 -4 5" />
+                </svg></button>
+            <button id="ctx-edit-btn" title="編輯"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                    viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                    <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" />
+                    <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z" />
+                    <path d="M16 5l3 3" />
+                </svg></button>
+            <button id="ctx-delete-btn" title="刪除"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                    viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                    <path d="M4 7l16 0" />
+                    <path d="M10 11l0 6" />
+                    <path d="M14 11l0 6" />
+                    <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" />
+                    <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />
+                </svg></button>
+        </div>
+        <div class="chat-messages" id="ai-chat-messages">
+        </div>
+        <div class="chat-input-wrapper">
+            <div id="file-preview-container"></div>
+            <div class="chat-input">
+                <button id="ai-chat-attach-btn" class="btn"><svg xmlns="http://www.w3.org/2000/svg" width="20"
+                        height="20" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path
+                            d="M15 7l-6.5 6.5a1.5 1.5 0 0 0 3 3l6.5 -6.5a3 3 0 0 0 -6 -6l-6.5 6.5a4.5 4.5 0 0 0 9 9l6.5 -6.5" />
+                    </svg></button>
+                <input type="file" id="ai-chat-file-input" class="hidden">
+                <textarea id="ai-chat-input" class="textarea" placeholder=""></textarea>
+                <button id="ai-chat-send-btn" class="btn"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                        viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M10 14l11 -11" />
+                        <path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5" />
+                    </svg></button>
             </div>
         </div>
-
+    </div>
+    <div class="bubble-container">
+        <div id="global-search-bubble">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" stroke-width="2"
+                stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" />
+                <path d="M21 21l-6 -6" />
+            </svg>
+        </div>
         <div id="ai-chat-bubble">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" stroke-width="2"
+            <svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="0 0 24 24" stroke-width="2"
                 stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
                 <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                 <path d="M4 21v-13a3 3 0 0 1 3 -3h10a3 3 0 0 1 3 3v6a3 3 0 0 1 -3 3h-9l-4 4" />
@@ -813,6 +972,55 @@
                 <path d="M9.5 13a3.5 3.5 0 0 0 5 0" />
             </svg>
             <div id="ai-chat-notification" class="hidden"></div>
+        </div>
+    </div>
+    <div id="task-form-modal">
+        <div class="card-2 grainy-effect card particles">
+            <h3 id="form-title">新增任務</h3>
+            <div class="form-body">
+                <input type="hidden" id="task-id-input">
+                <div class="form-group">
+                    <label>時間</label>
+                    <input type="text" class="input-field-Details" id="task-time-input">
+                </div>
+                <div class="form-group">
+                    <label>內容</label>
+                    <textarea id="task-content-input" class="input-field" placeholder="輸入任務內容..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>時長 (分鐘)</label>
+                    <input type="number" class="input-field-Details" id="task-duration-input" min="5" step="5"
+                        value="30">
+                    <div id="duration-adjust-buttons" style="margin-top: 8px; display: flex; gap: 8px;">
+                        <button type="button" class="btn-duration-adjust" onclick="adjustDuration(15)">+15m</button>
+                        <button type="button" class="btn-duration-adjust" onclick="adjustDuration(30)">+30m</button>
+                        <button type="button" class="btn-duration-adjust" onclick="adjustDuration(60)">+1h</button>
+                        <button type="button" class="btn-duration-adjust" onclick="adjustDuration(120)">+2h</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>選擇象限 (顏色)</label>
+                    <div id="color-selector" class="color-selector" style="padding: 15px 0;">
+                    </div>
+                </div>
+                <div class="form-group" id="recurring-task-section">
+                    <label>
+                        <input type="checkbox" id="recurring-task-checkbox"
+                            onchange="document.getElementById('recurring-dates-container').style.display = this.checked ? 'block' : 'none'">
+                        新增到多個日期 (重複性任務)
+                    </label>
+                    <div id="recurring-dates-container" style="display: none; margin-top: 10px;">
+                        <label for="task-dates-input">選擇日期</label>
+                        <input type="text" class="input-field-Details" id="task-dates-input" placeholder="點擊選擇一個或多個日期">
+                    </div>
+                </div>
+            </div>
+            <div class="form-footer" style="text-align: right; display:flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn-delete" id="delete-task-btn" onclick="TimeQuadrantTracker.deleteTaskFromModal()"
+                    style="margin-right: auto; display: none;">🗑️</button>
+                <button class="btn-save-unified" onclick="TimeQuadrantTracker.saveTask()">💾</button>
+                <button class="btn-cancel-unified" onclick="TimeQuadrantTracker.closeTaskForm()">❌</button>
+            </div>
         </div>
     </div>
     <script src="script.js"></script>

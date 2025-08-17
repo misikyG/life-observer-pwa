@@ -103,122 +103,7 @@ const DBHelper = {
         return Promise.all(putPromises);
     }
 };
-// --- 主動式 AI 管理器 (Proactive AI Manager) ---
-const ProactiveAIManager = {
-    lastTriggered: {},
 
-    async checkTriggers(event) {
-        console.log(`[AI Manager] 收到事件: ${event.type}`, event.data);
-
-        if (event.type === 'TASK_STATE_CHANGED') {
-            await this.checkTaskRules();
-        }
-        if (event.type === 'HABIT_CHECKED_IN') {
-            await this.checkHabitRules(event.data.habitId);
-        }
-        if (event.type === 'MOOD_ENTRY_SAVED') {
-            await this.checkMoodRules();
-        }
-    },
-
-    async checkTaskRules() {
-        const todayStr = new Date().toISOString().split('T')[0];
-        const allTasks = await DBHelper.getAll('tasks') || [];
-        const todayTasks = allTasks.filter(t => t.date === todayStr);
-        if (todayTasks.length === 0) return;
-
-        const completedTasks = todayTasks.filter(t => t.completed);
-        const quadrantScores = { 'A': 4, 'B': 3, 'C': 2, 'D': 1 };
-        const totalScore = completedTasks.reduce((sum, task) => sum + (quadrantScores[task.quadrant] || 0), 0);
-
-        if (totalScore >= 20 && this.canTrigger('taskScoreHigh20')) {
-            const prompt = `[系統指令] 使用者今天生產力爆發，任務總得分已達 ${totalScore} 分。充滿活力的語氣恭喜，並溫馨提醒記得要適度休息。`;
-            this.triggerAI(prompt, 'taskScoreHigh20');
-        }
-
-        const uncompletedImportantTasks = todayTasks.filter(t => !t.completed && (t.quadrant === 'A' || t.quadrant === 'B')).length;
-        if (new Date().getHours() >= 19 && uncompletedImportantTasks > 2 && this.canTrigger('taskRemindLate')) {
-            const prompt = `[系統指令] 現在已經晚上，使用者還有 ${uncompletedImportantTasks} 個重要任務尚未完成。用溫和語氣提醒。`;
-            this.triggerAI(prompt, 'taskRemindLate');
-        }
-    },
-
-    async checkHabitRules(justCompletedHabitId) {
-        const todayStr = new Date().toISOString().split('T')[0];
-        const allHabits = await DBHelper.getAll('habits') || [];
-
-        const todayCompletedHabits = allHabits.filter(h => h.checkIns.some(ts => new Date(ts).toISOString().split('T')[0] === todayStr));
-        if (todayCompletedHabits.length === 3 && this.canTrigger('habitMilestone3')) {
-            const completedNames = todayCompletedHabits.map(h => `「${h.name}」`).join('、');
-            const prompt = `[系統指令] 使用者展現了毅力，今天已經完成 ${completedNames} 共 3 個習慣！請稱讚並鼓勵繼續保持。`;
-            this.triggerAI(prompt, 'habitMilestone3');
-        }
-
-        const habit = allHabits.find(h => h.id === justCompletedHabitId);
-        if (!habit) return;
-
-        const oldMilestone = HabitTracker.calculateMilestone(habit.checkIns.length - 1);
-        const newMilestone = HabitTracker.calculateMilestone(habit.checkIns.length);
-
-        if (newMilestone.level > oldMilestone.level && this.canTrigger(`habitLevelUp_${habit.id}`)) {
-            const prompt = `[系統指令] 使用者的習慣「${habit.name}」剛剛升級到了 Lv.${newMilestone.level} - ${newMilestone.name}！請為他的努力和堅持給予祝賀。`;
-            this.triggerAI(prompt, `habitLevelUp_${habit.id}`);
-        }
-    },
-
-    async checkMoodRules() {
-        const todayStr = new Date().toISOString().split('T')[0];
-        const allMoods = await DBHelper.getAll('moods') || [];
-        const todayEntries = allMoods.filter(e => e.date === todayStr);
-        if (todayEntries.length < 2) return;
-
-        const moodValue = { '快樂': 5, '感恩': 4, '平靜': 3, '疲憊': 1, '壓力': -2 };
-        let totalScore = 0;
-        let moodCount = 0;
-        todayEntries.forEach(entry => {
-            entry.moods.forEach(mood => {
-                totalScore += (moodValue[mood] || 0);
-                moodCount++;
-            });
-        });
-
-        if (moodCount === 0) return;
-        const averageScore = totalScore / moodCount;
-
-        if (averageScore >= 4.5 && this.canTrigger('moodHigh')) {
-            const prompt = `[系統指令] 偵測到使用者今天的心情指數高達 ${averageScore.toFixed(1)} 分！這真是美好的一天。祝賀與喜悅。`;
-            this.triggerAI(prompt, 'moodHigh');
-        }
-        if (averageScore <= 2.0 && this.canTrigger('moodLow')) {
-            const prompt = `[系統指令] 偵測到使用者今天的心情指數偏低，只有 ${averageScore.toFixed(1)} 分。以溫和支持語氣關心，提供一些能緩和情緒的建議（例如深呼吸、聽音樂、散步），但不要過度追問。`;
-            this.triggerAI(prompt, 'moodLow');
-        }
-    },
-
-    canTrigger(ruleId) {
-        const todayStr = new Date().toISOString().split('T')[0];
-        if (this.lastTriggered[ruleId] !== todayStr) {
-            return true;
-        }
-        return false;
-    },
-
-    triggerAI(systemInstruction, ruleId) {
-        console.log(`[AI Manager] 觸發規則 "${ruleId}"`);
-        FloatingAIChat.sendSystemMessage(systemInstruction);
-
-        const todayStr = new Date().toISOString().split('T')[0];
-        this.lastTriggered[ruleId] = todayStr;
-        DBHelper.put('appState', { key: 'proactiveAITriggers', value: this.lastTriggered });
-    },
-
-    async init() {
-        const savedTriggers = await DBHelper.get('appState', 'proactiveAITriggers');
-        if (savedTriggers) {
-            this.lastTriggered = savedTriggers.value;
-        }
-    }
-};
 // --- 全域 UI 控制 ---
 let currentReviewDate = new Date();
 let selectedDateForReview = null;
@@ -264,7 +149,7 @@ function showSection(sectionId) {
         if (!AttendanceTracker.isInitialized) AttendanceTracker.init();
         dateDisplay.style.fontSize = '1.2rem';
         AttendanceTracker.updateCurrentTime();
-        timeUpdateInterval = setInterval(AttendanceTracker.updateCurrentTime, 1000);
+        timeUpdateInterval = setInterval(() => AttendanceTracker.updateCurrentTime(), 1000);
     } else {
         dateDisplay.style.fontSize = '1rem';
         updateCurrentDate();
@@ -279,6 +164,10 @@ function showSection(sectionId) {
     if (sectionId === 'habit-tracker') {
         HabitTracker.renderHabits();
         HabitTracker.renderReportChart();
+    }
+
+    if (sectionId === 'image-memory') {
+        ImageMemory.render();
     }
 
     if (sectionId === 'review-stats') {
@@ -354,6 +243,21 @@ function autoResizeTextarea(element) {
 
 // --- 打卡追蹤模組 ---
 const AttendanceTracker = {
+    PUNCH_TYPES: {
+        WORK_IN: 'work-in',
+        WORK_OUT: 'work-out',
+        BREAK_START: 'break-start',
+        BREAK_END: 'break-end'
+    },
+
+    updateCurrentTime() {
+        const now = new Date();
+        const dateDisplay = document.getElementById('current-date');
+        if (dateDisplay) {
+            dateDisplay.textContent = this.formatDateTime(now);
+        }
+    },
+
     isInitialized: false,
     currentStatus: 'idle',
     workStartTime: null,
@@ -366,7 +270,6 @@ const AttendanceTracker = {
     appNotificationsEnabled: true,
 
     async init() {
-        this.injectHTML();
         await this.loadSettings();
         await this.loadData();
         this.updateStatus();
@@ -376,61 +279,6 @@ const AttendanceTracker = {
         this.restoreReminders();
         setInterval(() => this.checkReminders(), 60000);
         this.isInitialized = true;
-    },
-
-    injectHTML() {
-        const target = document.getElementById('attendance-tracker-section');
-        target.innerHTML = `
-                <div class="container-tracker">
-                    <div class="main-content-tracker">                       
-                        <div class="punch-section">
-                            <div class="punch-buttons">
-                                <button class="punch-btn work-in" id="workInBtn" onclick="AttendanceTracker.punchCard('work-in')"><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6.5 7h11" /><path d="M6.5 17h11" /><path d="M6 20v-2a6 6 0 1 1 12 0v2a1 1 0 0 1 -1 1h-10a1 1 0 0 1 -1 -1z" /><path d="M6 4v2a6 6 0 1 0 12 0v-2a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1z" /></svg>上工打卡</button>
-                                <button class="punch-btn work-out" id="workOutBtn" onclick="AttendanceTracker.punchCard('work-out')"><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M18 18v2a1 1 0 0 1 -1 1h-10a1 1 0 0 1 -1 -1v-2a6 6 0 0 1 6 -6" /><path d="M6 6a6 6 0 0 0 6 6m3.13 -.88a6 6 0 0 0 2.87 -5.12v-2a1 1 0 0 0 -1 -1h-10" /><path d="M3 3l18 18" /></svg>下工打卡</button>
-                                <button class="punch-btn break-start" id="breakStartBtn" onclick="AttendanceTracker.punchCard('break-start')"><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 11h16a1 1 0 0 1 1 1v.5c0 1.5 -2.517 5.573 -4 6.5v1a1 1 0 0 1 -1 1h-8a1 1 0 0 1 -1 -1v-1c-1.687 -1.054 -4 -5 -4 -6.5v-.5a1 1 0 0 1 1 -1z" /><path d="M12 4a2.4 2.4 0 0 0 -1 2a2.4 2.4 0 0 0 1 2" /><path d="M16 4a2.4 2.4 0 0 0 -1 2a2.4 2.4 0 0 0 1 2" /><path d="M8 4a2.4 2.4 0 0 0 -1 2a2.4 2.4 0 0 0 1 2" /></svg>中場休息</button>
-                                <button class="punch-btn break-end" id="breakEndBtn" onclick="AttendanceTracker.punchCard('break-end')"><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 19h16" /><path d="M15 11h6c0 1.691 -.525 3.26 -1.42 4.552m-2.034 2.032a7.963 7.963 0 0 1 -4.546 1.416h-2a8 8 0 0 1 -8 -8h8" /><path d="M12 5v3" /><path d="M15 5v3" /><path d="M3 3l18 18" /></svg>結束休息</button>
-                            </div>                   
-                        </div>
-
-                        <div class="tracker-main-grid">
-                            <div class="tracker-grid-left">
-                                <div class="settings-tracker">
-                                    <h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M13.256 20.473c-.855 .907 -2.583 .643 -2.931 -.79a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.07 .26 1.488 1.29 1.254 2.15" /><path d="M19 16l-2 3h4l-2 3" /><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /></svg>提醒設定</h3>
-                                    <div id="notificationPermission" class="notification-permission"></div>
-                                    <div class="setting-row"><label>工作時數:</label><input type="number" id="workHours" value="8" min="1" max="24" onchange="AttendanceTracker.saveSettings()"><span>小時</span></div>
-                                    <div class="setting-row"><label>休息時間:</label><input type="number" id="breakMinutes" value="15" min="1" max="120" onchange="AttendanceTracker.saveSettings()"><span>分鐘</span></div>
-                                    <div class="setting-row"><label><input type="checkbox" id="enableSound" checked onchange="AttendanceTracker.saveSettings()"> 啟用提醒音效</label></div>
-                                </div>
-                                <div class="charts-section">
-                                    <div class="chart-container"><h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /><path d="M7 3v4h4" /><path d="M9 17l0 4" /><path d="M17 14l0 7" /><path d="M13 13l0 8" /><path d="M21 12l0 9" />
-                                        </svg>本週工作時數</h3><canvas id="weekChart" width="400" height="200"></canvas></div>
-                                    <div class="chart-container"><h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 3v18h18" /><path d="M20 18v3" /><path d="M16 16v5" /><path d="M12 13v8" /><path d="M8 16v5" /><path d="M3 11c6 0 5 -5 9 -5s3 5 9 5" />
-                                        </svg>本月工作時數</h3><canvas id="monthChart" width="400" height="200"></canvas></div>
-                                </div>
-                            </div>
-                            <div class="tracker-grid-right">
-                                <div class="status-tracker" id="statusDisplay">
-                                    <h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M20.984 12.53a9 9 0 1 0 -7.552 8.355" /><path d="M12 7v5l3 3" /><path d="M19 16l-2 3h4l-2 3" /></svg>當前狀態</h3>
-                                    <div id="statusContent">尚未打卡</div>
-                                </div>
-                                <div class="records-tracker">
-                                    <h3><svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                        <path d="M9 6l11 0" />
-                                        <path d="M9 12l11 0" />
-                                        <path d="M9 18l11 0" />
-                                        <path d="M5 6l0 .01" />
-                                        <path d="M5 12l0 .01" />
-                                        <path d="M5 18l0 .01" />
-                                        </svg>最近記錄</h3>
-                                    <div id="recordsList"></div>
-                                </div>
-                                
-                            </div>                           
-                        </div>                   
-                    </div>
-                </div>
-            `;
     },
 
     checkNotificationPermission() {
@@ -478,10 +326,15 @@ const AttendanceTracker = {
     },
 
     showNotification(title, body, type = 'info') {
-        if (!this.appNotificationsEnabled) return;
-        if ('Notification' in window && Notification.permission === 'granted') {
-            const notification = new Notification(title, { body: body, icon: 'https://cdn.discordapp.com/attachments/1345376114272505918/1402580818563567626/ICON1.png?ex=68946ead&is=68931d2d&hm=51bc4c8f5df4bfa1d772dc2af2aa972cda9fd204c61665d1b20353c190f859d7&' });
-            if (document.getElementById('enableSound')?.checked) this.playNotificationSound();
+        if (!this.appNotificationsEnabled || !('Notification' in window) || Notification.permission !== 'granted') return;
+
+        new Notification(title, {
+            body: body,
+            icon: 'https://cdn.discordapp.com/attachments/1345376114272505918/1402580818563567626/ICON1.png?ex=68946ead&is=68931d2d&hm=51bc4c8f5df4bfa1d772dc2af2aa972cda9fd204c61665d1b20353c190f859d7&'
+        });
+
+        if (document.getElementById('enableSound')?.checked) {
+            this.playNotificationSound();
         }
     },
 
@@ -494,43 +347,30 @@ const AttendanceTracker = {
             oscillator.connect(audioContext.destination);
             oscillator.start();
             oscillator.stop(audioContext.currentTime + 0.5);
-        } catch (e) { console.warn("無法播放音效", e); }
-    },
-
-    updateCurrentTime() {
-        const timeEl = document.getElementById('current-date');
-        if (timeEl) timeEl.textContent = AttendanceTracker.formatDateTime(new Date());
-    },
-
-    formatDateTime(date) {
-        const year = date.getFullYear();
-        const month = date.getMonth() + 1;
-        const day = date.getDate();
-
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const seconds = String(date.getSeconds()).padStart(2, '0');
-
-        const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
-        const weekday = weekdays[date.getDay()];
-
-        return `${year}/${month}/${day} (${weekday}) ${hours}:${minutes}:${seconds}`;
+        } catch (e) {
+            console.warn("無法播放音效", e);
+        }
     },
 
     async punchCard(type) {
         const now = new Date();
-        let records = await this.getRecords();
-        records.push({ type: type, timestamp: now.getTime(), dateTime: this.formatDateTime(now) });
-        await DBHelper.put('punchRecords', { type: type, timestamp: now.getTime(), dateTime: this.formatDateTime(now) });
+
+        try {
+            await DBHelper.put('punchRecords', { type: type, timestamp: now.getTime(), dateTime: this.formatDateTime(now) });
+        } catch (error) {
+            console.error('打卡記錄儲存失敗:', error);
+            alert('錯誤：無法儲存您的打卡記錄，請稍後再試。');
+            return;
+        }
 
         switch (type) {
-            case 'work-in':
+            case this.PUNCH_TYPES.WORK_IN:
                 this.currentStatus = 'working';
                 this.workStartTime = now;
                 this.setWorkEndReminder();
                 this.showNotification('上工打卡成功', `開始時間：${this.formatDateTime(now)}`, 'success');
                 break;
-            case 'work-out':
+            case this.PUNCH_TYPES.WORK_OUT:
                 if (this.currentStatus === 'working') {
                     const workDuration = await this.calculateWorkTime();
                     this.showNotification('下工打卡成功', `今日工作時長：${this.formatDuration(workDuration)}`, 'success');
@@ -539,26 +379,25 @@ const AttendanceTracker = {
                 this.workStartTime = null;
                 this.clearReminders();
                 break;
-            case 'break-start':
+            case this.PUNCH_TYPES.BREAK_START:
                 this.currentStatus = 'break';
                 this.breakStartTime = now;
                 this.setBreakEndReminder();
                 this.showNotification('中場休息', `開始時間：${this.formatDateTime(now)}`, 'info');
                 break;
-            case 'break-end':
+            case this.PUNCH_TYPES.BREAK_END:
                 this.currentStatus = 'working';
                 this.breakStartTime = null;
                 clearTimeout(this.breakReminderTimeout);
-                this.showNotification('結束休息', `繼續工作`, 'info');
+                this.showNotification('結束休息', '繼續工作', 'info');
                 break;
         }
+
         this.saveCurrentStatus();
         this.updateStatus();
         this.updateRecords();
         await this.updateCharts();
     },
-
-    getActionName: type => ({ 'work-in': '上工打卡', 'work-out': '下工打卡', 'break-start': '開始休息', 'break-end': '結束休息' }[type] || ''),
 
     setWorkEndReminder() {
         clearTimeout(this.reminderTimeout);
@@ -581,6 +420,182 @@ const AttendanceTracker = {
         clearTimeout(this.breakReminderTimeout);
     },
 
+    restoreReminders() {
+        if (this.currentStatus === 'working' && this.workStartTime) {
+            const workHours = parseInt(document.getElementById('workHours').value) * 3600000;
+            const elapsedTime = new Date().getTime() - this.workStartTime.getTime();
+            const remainingTime = workHours - elapsedTime;
+
+            if (remainingTime > 0) {
+                console.log(`重新設定下工提醒，剩餘 ${remainingTime / 60000} 分鐘`);
+                this.setWorkEndReminder();
+            }
+        }
+        if (this.currentStatus === 'break' && this.breakStartTime) {
+            const breakMinutes = parseInt(document.getElementById('breakMinutes').value) * 60000;
+            const elapsedTime = new Date().getTime() - this.breakStartTime.getTime();
+            const remainingTime = breakMinutes - elapsedTime;
+
+            if (remainingTime > 0) {
+                console.log(`重新設定休息結束提醒，剩餘 ${remainingTime / 60000} 分鐘`);
+                this.setBreakEndReminder();
+            }
+        }
+    },
+
+    checkReminders() {
+        this.updateStatus();
+    },
+
+    updateStatus() {
+        const statusContent = document.getElementById('statusContent');
+        if (!statusContent) return;
+
+        const btns = {
+            workIn: document.getElementById('workInBtn'),
+            workOut: document.getElementById('workOutBtn'),
+            breakStart: document.getElementById('breakStartBtn'),
+            breakEnd: document.getElementById('breakEndBtn')
+        };
+
+        Object.values(btns).forEach(btn => { if (btn) btn.disabled = false; });
+
+        switch (this.currentStatus) {
+            case 'idle':
+                statusContent.innerHTML = '🛌 目前狀態：待命中';
+                if (btns.workOut) btns.workOut.disabled = true;
+                if (btns.breakStart) btns.breakStart.disabled = true;
+                if (btns.breakEnd) btns.breakEnd.disabled = true;
+                break;
+            case 'working':
+                const workDuration = this.workStartTime ? this.formatDuration(new Date().getTime() - this.workStartTime.getTime()) : '0分鐘';
+                statusContent.innerHTML = `💼 目前狀態：工作中<br>已工作時間：${workDuration}`;
+                if (btns.workIn) btns.workIn.disabled = true;
+                if (btns.breakEnd) btns.breakEnd.disabled = true;
+                break;
+            case 'break':
+                const breakDuration = this.breakStartTime ? this.formatDuration(new Date().getTime() - this.breakStartTime.getTime()) : '0分鐘';
+                statusContent.innerHTML = `☕ 目前狀態：休息中<br>已休息時間：${breakDuration}`;
+                if (btns.workIn) btns.workIn.disabled = true;
+                if (btns.workOut) btns.workOut.disabled = true;
+                if (btns.breakStart) btns.breakStart.disabled = true;
+                break;
+        }
+    },
+
+    async updateRecords() {
+        const recordsList = document.getElementById('recordsList');
+        if (!recordsList) return;
+
+        try {
+            let allRecords = await this.getRecords();
+
+            if (allRecords.length === 0) {
+                recordsList.innerHTML = '<div class="record-item">暫無打卡記錄</div>';
+                return;
+            }
+
+            allRecords.sort((a, b) => b.timestamp - a.timestamp);
+            const recordsToDisplay = allRecords.slice(0, 16);
+
+            const icons = {
+                [this.PUNCH_TYPES.WORK_IN]: '🕛',
+                [this.PUNCH_TYPES.WORK_OUT]: '🛌',
+                [this.PUNCH_TYPES.BREAK_START]: '☕',
+                [this.PUNCH_TYPES.BREAK_END]: '💼'
+            };
+
+            recordsList.innerHTML = recordsToDisplay.map(r =>
+                `<div class="record-item">${icons[r.type] || '📝'} ${this.getActionName(r.type)} - ${r.dateTime}</div>`
+            ).join('');
+
+        } catch (error) {
+            console.error("更新打卡紀錄失敗:", error);
+            recordsList.innerHTML = '<div class="record-item" style="color: red;">讀取紀錄失敗</div>';
+        }
+    },
+
+    async updateCharts() {
+        await this.updateWeekChart().catch(err => console.error("更新週圖表失敗:", err));
+        await this.updateMonthChart().catch(err => console.error("更新月圖表失敗:", err));
+    },
+
+    async updateWeekChart() {
+        const ctx = document.getElementById('weekChart')?.getContext('2d');
+        if (!ctx) return;
+
+        const workTimeRecords = await DBHelper.getAll('workTimeRecords') || [];
+        const now = new Date();
+        const startOfWeek = new Date(now.setDate(now.getDate() - (now.getDay() || 7) + 1));
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        const weekData = Array(7).fill(0);
+        workTimeRecords.forEach(r => {
+            const recordDate = new Date(r.date);
+            if (recordDate >= startOfWeek) {
+                const dayIndex = (recordDate.getDay() + 6) % 7;
+                weekData[dayIndex] += r.duration / 3600000;
+            }
+        });
+
+        if (this.weekChart) this.weekChart.destroy();
+
+        this.weekChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['一', '二', '三', '四', '五', '六', '日'],
+                datasets: [{
+                    label: '工作時數',
+                    data: weekData.map(h => h.toFixed(2)),
+                    backgroundColor: 'rgba(99, 196, 77, 0.7)'
+                }]
+            },
+            options: {
+                scales: { y: { beginAtZero: true, title: { display: true, text: '小時' } } }
+            }
+        });
+    },
+
+    async updateMonthChart() {
+        const ctx = document.getElementById('monthChart')?.getContext('2d');
+        if (!ctx) return;
+
+        const workTimeRecords = await DBHelper.getAll('workTimeRecords') || [];
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        const dailyData = {};
+        workTimeRecords.forEach(r => {
+            const recordDate = new Date(r.date);
+            if (recordDate >= startOfMonth) {
+                const dateKey = recordDate.toISOString().split('T')[0];
+                dailyData[dateKey] = (dailyData[dateKey] || 0) + r.duration / 3600000; // 小時
+            }
+        });
+
+        const labels = Object.keys(dailyData).sort().map(d => `${new Date(d).getMonth() + 1}/${new Date(d).getDate()}`);
+        const data = Object.values(dailyData).map(h => h.toFixed(2));
+
+        if (this.monthChart) this.monthChart.destroy();
+
+        this.monthChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: '工作時數',
+                    data,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                scales: { y: { beginAtZero: true, title: { display: true, text: '小時' } } }
+            }
+        });
+    },
+
     async calculateWorkTime() {
         if (!this.workStartTime) return 0;
         const now = new Date();
@@ -590,34 +605,36 @@ const AttendanceTracker = {
             date: new Date().toISOString().split('T')[0],
             duration: workTime
         };
-        await DBHelper.put('workTimeRecords', workRecord);
+
+        try {
+            await DBHelper.put('workTimeRecords', workRecord);
+        } catch (error) {
+            console.error("儲存工作時長記錄失敗:", error);
+        }
 
         return workTime;
     },
 
-    updateStatus() {
-        const statusContent = document.getElementById('statusContent');
-        if (!statusContent) return;
+    getActionName(type) {
+        const names = {
+            [this.PUNCH_TYPES.WORK_IN]: '上工打卡',
+            [this.PUNCH_TYPES.WORK_OUT]: '下工打卡',
+            [this.PUNCH_TYPES.BREAK_START]: '開始休息',
+            [this.PUNCH_TYPES.BREAK_END]: '結束休息'
+        };
+        return names[type] || '未知操作';
+    },
 
-        const btns = ['workInBtn', 'workOutBtn', 'breakStartBtn', 'breakEndBtn'].map(id => document.getElementById(id));
-        btns.forEach(btn => { if (btn) btn.disabled = false; });
-
-        switch (this.currentStatus) {
-            case 'idle':
-                statusContent.innerHTML = '🛌 目前狀態：待命中';
-                if (btns[1]) btns[1].disabled = true; if (btns[2]) btns[2].disabled = true; if (btns[3]) btns[3].disabled = true;
-                break;
-            case 'working':
-                const workDuration = this.workStartTime ? this.formatDuration(new Date().getTime() - this.workStartTime.getTime()) : '0分鐘';
-                statusContent.innerHTML = `💼 目前狀態：工作中<br>已工作時間：${workDuration}`;
-                if (btns[0]) btns[0].disabled = true; if (btns[3]) btns[3].disabled = true;
-                break;
-            case 'break':
-                const breakDuration = this.breakStartTime ? this.formatDuration(new Date().getTime() - this.breakStartTime.getTime()) : '0分鐘';
-                statusContent.innerHTML = `☕ 目前狀態：休息中<br>已休息時間：${breakDuration}`;
-                if (btns[0]) btns[0].disabled = true; if (btns[1]) btns[1].disabled = true; if (btns[2]) btns[2].disabled = true;
-                break;
-        }
+    formatDateTime(date) {
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+        const weekday = weekdays[date.getDay()];
+        return `${year}/${month}/${day} (${weekday}) ${hours}:${minutes}:${seconds}`;
     },
 
     formatDuration(ms) {
@@ -631,148 +648,106 @@ const AttendanceTracker = {
         return parts.join(' ') || '0秒';
     },
 
-    getRecords: async () => await DBHelper.getAll('punchRecords') || [],
-
-    async updateRecords() {
-        const recordsList = document.getElementById('recordsList');
-        if (!recordsList) return;
-        let records = await this.getRecords();
-        if (records.length === 0) {
-            recordsList.innerHTML = '<div class="record-item">暫無打卡記錄</div>';
-            return;
+    async getRecords() {
+        try {
+            return await DBHelper.getAll('punchRecords') || [];
+        } catch (error) {
+            console.error("獲取打卡記錄失敗:", error);
+            throw error;
         }
-        records.sort((a, b) => b.timestamp - a.timestamp);
-        const icons = { 'work-in': '🕛', 'work-out': '🛌', 'break-start': '☕', 'break-end': '💼' };
-        recordsList.innerHTML = records.map(r => `<div class="record-item">${icons[r.type] || '📝'} ${this.getActionName(r.type)} - ${r.dateTime}</div>`).join('');
-    },
-
-    async updateCharts() {
-        await this.updateWeekChart();
-        await this.updateMonthChart();
-    },
-
-    async updateWeekChart() {
-        const ctx = document.getElementById('weekChart')?.getContext('2d');
-        if (!ctx) return;
-        const workTimeRecords = await DBHelper.getAll('workTimeRecords') || [];
-        const now = new Date();
-        const startOfWeek = new Date(now.setDate(now.getDate() - (now.getDay() || 7) + 1));
-        startOfWeek.setHours(0, 0, 0, 0);
-        const weekData = [0, 0, 0, 0, 0, 0, 0];
-        workTimeRecords.forEach(r => {
-            const recordDate = new Date(r.date);
-            if (recordDate >= startOfWeek) {
-                const dayIndex = (recordDate.getDay() + 6) % 7;
-                weekData[dayIndex] += r.duration / 3600000;
-            }
-        });
-        if (this.weekChart) this.weekChart.destroy();
-        this.weekChart = new Chart(ctx,
-            {
-                type: 'bar',
-                data: { labels: ['一', '二', '三', '四', '五', '六', '日'], datasets: [{ label: '工作時數', data: weekData.map(h => h.toFixed(2)), backgroundColor: 'rgba(99, 196, 77, 0.7)' }] },
-                options: {
-                    scales: { y: { beginAtZero: true, title: { display: true, text: '小時' } } }
-                }
-            });
-    },
-
-    async updateMonthChart() {
-        const ctx = document.getElementById('monthChart')?.getContext('2d');
-        if (!ctx) return;
-        const workTimeRecords = await DBHelper.getAll('workTimeRecords') || [];
-        const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const dailyData = {};
-        workTimeRecords.forEach(r => {
-            const recordDate = new Date(r.date);
-            if (recordDate >= startOfMonth) {
-                const dateKey = recordDate.toISOString().split('T')[0];
-                dailyData[dateKey] = (dailyData[dateKey] || 0) + r.duration / 3600000;
-            }
-        });
-        const labels = Object.keys(dailyData).sort().map(d => `${new Date(d).getMonth() + 1}/${new Date(d).getDate()}`);
-        const data = Object.values(dailyData).map(h => h.toFixed(2));
-        if (this.monthChart) this.monthChart.destroy();
-        this.monthChart = new Chart(ctx, {
-            type: 'line',
-            data: { labels, datasets: [{ label: '工作時數', data, borderColor: 'rgba(75, 192, 192, 1)', backgroundColor: 'rgba(75, 192, 192, 0.7)', tension: 0.1 }] },
-            options: {
-                scales: { y: { beginAtZero: true, title: { display: true, text: '小時' } } }
-            }
-        });
     },
 
     async saveSettings() {
-        const settings = {
-            workHours: document.getElementById('workHours').value,
-            breakMinutes: document.getElementById('breakMinutes').value,
-            appNotificationsEnabled: this.appNotificationsEnabled,
-            enableSound: document.getElementById('enableSound').checked,
-        };
-        await DBHelper.put('appState', { key: 'trackerSettings', value: settings });
+        try {
+            const settings = {
+                workHours: document.getElementById('workHours').value,
+                breakMinutes: document.getElementById('breakMinutes').value,
+                appNotificationsEnabled: this.appNotificationsEnabled,
+                enableSound: document.getElementById('enableSound').checked,
+            };
+            await DBHelper.put('appState', { key: 'trackerSettings', value: settings });
+        } catch (error) {
+            console.error("儲存設定失敗:", error);
+            alert("錯誤：無法儲存您的設定。");
+        }
     },
 
     async loadSettings() {
-        const settings = await DBHelper.get('appState', 'trackerSettings');
-        if (document.getElementById('workHours')) {
-            document.getElementById('workHours').value = settings?.value.workHours || 8;
-            document.getElementById('breakMinutes').value = settings?.value.breakMinutes || 15;
-            this.appNotificationsEnabled = settings?.value.appNotificationsEnabled !== false;
-            document.getElementById('enableSound').checked = settings?.value.enableSound !== false;
+        try {
+            const settings = await DBHelper.get('appState', 'trackerSettings');
+            if (document.getElementById('workHours')) {
+                document.getElementById('workHours').value = settings?.value.workHours || 8;
+                document.getElementById('breakMinutes').value = settings?.value.breakMinutes || 15;
+                this.appNotificationsEnabled = settings?.value.appNotificationsEnabled !== false;
+                document.getElementById('enableSound').checked = settings?.value.enableSound !== false;
+            }
+        } catch (error) {
+            console.error("讀取設定失敗:", error);
         }
     },
 
     async saveCurrentStatus() {
-        const status = {
-            currentStatus: this.currentStatus,
-            workStartTime: this.workStartTime ? this.workStartTime.getTime() : null,
-            breakStartTime: this.breakStartTime ? this.breakStartTime.getTime() : null
-        };
-        await DBHelper.put('appState', { key: 'trackerCurrentStatus', value: status });
+        try {
+            const status = {
+                currentStatus: this.currentStatus,
+                workStartTime: this.workStartTime ? this.workStartTime.getTime() : null,
+                breakStartTime: this.breakStartTime ? this.breakStartTime.getTime() : null
+            };
+            await DBHelper.put('appState', { key: 'trackerCurrentStatus', value: status });
+        } catch (error) {
+            console.error("儲存當前狀態失敗:", error);
+        }
     },
 
     async loadData() {
-        const status = await DBHelper.get('appState', 'trackerCurrentStatus');
-        this.currentStatus = status?.value.currentStatus || 'idle';
-        this.workStartTime = status?.value.workStartTime ? new Date(status.value.workStartTime) : null;
-        this.breakStartTime = status?.value.breakStartTime ? new Date(status.value.breakStartTime) : null;
+        try {
+            const status = await DBHelper.get('appState', 'trackerCurrentStatus');
+            this.currentStatus = status?.value.currentStatus || 'idle';
+            this.workStartTime = status?.value.workStartTime ? new Date(status.value.workStartTime) : null;
+            this.breakStartTime = status?.value.breakStartTime ? new Date(status.value.breakStartTime) : null;
+        } catch (error) {
+            console.error("讀取狀態資料失敗:", error);
+        }
     },
 
     async exportData() {
-        const punchRecords = await DBHelper.getAll('punchRecords');
-        const workTimeRecords = await DBHelper.getAll('workTimeRecords');
-        const settings = await DBHelper.get('appState', 'trackerSettings');
-
-        const data = {
-            punchRecords: punchRecords,
-            workTimeRecords: workTimeRecords,
-            settings: settings?.value || {}
-        };
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `punch_data_${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        URL.revokeObjectURL(a.href);
+        try {
+            const data = {
+                punchRecords: await DBHelper.getAll('punchRecords'),
+                workTimeRecords: await DBHelper.getAll('workTimeRecords'),
+                settings: (await DBHelper.get('appState', 'trackerSettings'))?.value || {}
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `punch_data_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        } catch (error) {
+            console.error("匯出資料失敗:", error);
+            alert("錯誤：無法匯出資料。");
+        }
     },
 
     async importData(input) {
         const file = input.files[0];
         if (!file) return;
+
         const reader = new FileReader();
         reader.onload = async (e) => {
             try {
                 const data = JSON.parse(e.target.result);
                 if (confirm('確定要匯入打卡資料嗎？這會覆蓋現有的所有打卡記錄與設定。')) {
-                    if (data.punchRecords) await DBHelper.saveAll('punchRecords', data.punchRecords);
-                    if (data.workTimeRecords) await DBHelper.saveAll('workTimeRecords', data.workTimeRecords);
-                    if (data.settings) await DBHelper.put('appState', { key: 'trackerSettings', value: data.settings });
-                    alert('資料匯入成功！');
-                    await this.init();
+                    await Promise.all([
+                        data.punchRecords ? DBHelper.saveAll('punchRecords', data.punchRecords) : Promise.resolve(),
+                        data.workTimeRecords ? DBHelper.saveAll('workTimeRecords', data.workTimeRecords) : Promise.resolve(),
+                        data.settings ? DBHelper.put('appState', { key: 'trackerSettings', value: data.settings }) : Promise.resolve()
+                    ]);
+                    alert('資料匯入成功！頁面將重新載入。');
+                    window.location.reload();
                 }
             } catch (error) {
-                alert('❌ 檔案格式錯誤，無法匯入資料。');
+                alert('❌ 檔案格式錯誤或匯入失敗，請檢查檔案內容。');
                 console.error("匯入失敗:", error);
             }
         };
@@ -781,56 +756,31 @@ const AttendanceTracker = {
     },
 
     async clearAllData() {
-        if (confirm('確定要清除所有打卡資料嗎？此操作無法復原。')) {
-            await DBHelper.clear('punchRecords');
-            await DBHelper.clear('workTimeRecords');
-            await DBHelper.delete('appState', 'trackerCurrentStatus');
-            await DBHelper.delete('appState', 'trackerSettings');
-            alert('所有打卡資料已清除。');
-            await this.init();
-        }
-    },
-
-    checkReminders() {
-        this.updateStatus();
-    },
-
-    restoreReminders() {
-        if (this.currentStatus === 'working' && this.workStartTime) {
-            const workHours = parseInt(document.getElementById('workHours').value) * 3600000;
-            const elapsedTime = new Date().getTime() - this.workStartTime.getTime();
-            const remainingTime = workHours - elapsedTime;
-
-            if (remainingTime > 0) {
-                console.log(`重新設定下工提醒，剩餘 ${remainingTime / 60000} 分鐘`);
-                clearTimeout(this.reminderTimeout);
-                this.reminderTimeout = setTimeout(() => {
-                    this.showNotification('⏰ 下工提醒', `你設定的工作時間 (${document.getElementById('workHours').value} 小時) 已經到了！`, 'reminder');
-                }, remainingTime);
-            }
-        }
-        if (this.currentStatus === 'break' && this.breakStartTime) {
-            const breakMinutes = parseInt(document.getElementById('breakMinutes').value) * 60000;
-            const elapsedTime = new Date().getTime() - this.breakStartTime.getTime();
-            const remainingTime = breakMinutes - elapsedTime;
-
-            if (remainingTime > 0) {
-                console.log(`重新設定休息結束提醒，剩餘 ${remainingTime / 60000} 分鐘`);
-                clearTimeout(this.breakReminderTimeout);
-                this.breakReminderTimeout = setTimeout(() => {
-                    this.showNotification('⏰ 休息結束提醒', `你設定的休息時間 (${document.getElementById('breakMinutes').value} 分鐘) 已經到了！`, 'reminder');
-                }, remainingTime);
+        if (confirm('【警告】確定要清除所有打卡資料與設定嗎？此操作無法復原。')) {
+            try {
+                await Promise.all([
+                    DBHelper.clear('punchRecords'),
+                    DBHelper.clear('workTimeRecords'),
+                    DBHelper.delete('appState', 'trackerCurrentStatus'),
+                    DBHelper.delete('appState', 'trackerSettings')
+                ]);
+                alert('所有資料已清除。頁面將重新載入。');
+                window.location.reload();
+            } catch (error) {
+                console.error("清除資料失敗:", error);
+                alert("錯誤：清除資料時發生問題。");
             }
         }
     },
 };
+
 // TimeQuadrantTracker模組
 const TimeQuadrantTracker = {
     isInitialized: false,
     getMonthlyTitle(score) {
         if (score >= 800) return "非常好現在你有冰淇淋";
         if (score >= 551) return "時間暫停壓路機";
-        if (score >= 381) return "你是富有的人";
+        if (score >= 381) return "你是有錢人了";
         if (score >= 251) return "時間管理大師";
         if (score >= 151) return "意志力修行者";
         if (score >= 80) return "逐漸照亮自己";
@@ -865,10 +815,10 @@ const TimeQuadrantTracker = {
     monthlyChart: null,
     matrixReminders: { a: [], b: [], c: [], d: [] },
     quadrantColors: {
-        'A': { name: '緊急且重要', color: 'rgba(240, 83, 72, 0.8)' },
-        'B': { name: '重要但不緊急', color: 'rgba(43, 165, 124, 0.8)' },
-        'C': { name: '緊急但不重要', color: 'rgba(90, 110, 224, 0.8)' },
-        'D': { name: '不緊急不重要', color: 'rgba(187, 170, 192, 0.8)' }
+        'A': { name: '緊急且重要', color: 'rgba(173, 64, 56, 0.7)' },
+        'B': { name: '重要但不緊急', color: 'rgba(56, 185, 121, 0.7)' },
+        'C': { name: '緊急但不重要', color: 'rgba(90, 110, 224, 0.7)' },
+        'D': { name: '不緊急不重要', color: 'rgba(188, 130, 206, 0.7)' }
     },
 
     async init() {
@@ -970,7 +920,7 @@ const TimeQuadrantTracker = {
             taskElement.style.height = `${duration * pixelPerMinute}px`;
 
             taskElement.style.left = '130px';
-            taskElement.style.width = 'calc(100% - 130px)';
+            taskElement.style.width = 'calc(100% - 140px)';
 
             taskElement.setAttribute('onclick', `if(event.target.closest('.task-actions, .task-completion')) return; TimeQuadrantTracker.openTaskForm(${task.id})`);
             taskElement.style.cursor = 'pointer';
@@ -985,7 +935,7 @@ const TimeQuadrantTracker = {
             taskElement.innerHTML = `
                             <div class="task-header">
                                 <div class="task-completion">
-                                    <input type="checkbox" id="task-check-${task.id}" ${task.completed ? 'checked' : ''} 
+                                    <input type="checkbox" id="task-check-${task.id}" class="pretty-checkbox" ${task.completed ? 'checked' : ''} 
                                         onchange="TimeQuadrantTracker.toggleTaskComplete(${task.id}); event.stopPropagation();">
                                     <label for="task-check-${task.id}" onclick="event.stopPropagation();"></label>
                                 </div>
@@ -1137,10 +1087,10 @@ const TimeQuadrantTracker = {
         this.closeTaskForm();
     },
 
-    deleteTask(taskId) {
-        if (confirm('確定要刪除這個任務嗎？')) {
-            this.tasks = this.tasks.filter(t => t.id !== taskId);
-            this.saveData();
+    async deleteTask(taskId) {
+        this.tasks = this.tasks.filter(t => t.id !== taskId);
+        await this.saveData();
+        if (!FloatingSearch.isWindowOpen) {
             this.render();
         }
     },
@@ -1163,123 +1113,124 @@ const TimeQuadrantTracker = {
 
     renderPieChart(period) {
         const isDaily = period === 'daily';
-        const canvasId = isDaily ? 'daily-pie-chart' : 'monthly-pie-chart';
-        const textId = isDaily ? 'daily-stats-text' : 'monthly-stats-text';
-        const chartInstance = isDaily ? 'dailyChart' : 'monthlyChart';
+        const containerId = isDaily ? 'daily-pie-chart-container' : 'monthly-pie-chart-container';
+        const container = document.getElementById(containerId);
 
-        const ctx = document.getElementById(canvasId)?.getContext('2d');
-        if (!ctx) return;
+        if (!container) return;
+        container.innerHTML = '';
 
         const now = new Date();
-        const startOfPeriod = isDaily ?
-            new Date(this.currentDate).setHours(0, 0, 0, 0) :
-            new Date(now.getFullYear(), now.getMonth(), 1);
-        const endOfPeriod = isDaily ?
-            new Date(this.currentDate).setHours(23, 59, 59, 999) :
-            new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        const startOfPeriod = isDaily
+            ? new Date(this.currentDate).setHours(0, 0, 0, 0)
+            : new Date(now.getFullYear(), now.getMonth(), 1).setHours(0, 0, 0, 0);
+        const endOfPeriod = isDaily
+            ? new Date(this.currentDate).setHours(23, 59, 59, 999)
+            : new Date(now.getFullYear(), now.getMonth() + 1, 0).setHours(23, 59, 59, 999);
 
         const tasksInPeriod = this.tasks.filter(t => {
-            const taskDate = new Date(t.date).setHours(0, 0, 0, 0);
-            return taskDate >= startOfPeriod && taskDate <= endOfPeriod;
+            const taskDate = new Date(t.date);
+            const taskTimestamp = taskDate.getTime();
+            return taskTimestamp >= startOfPeriod && taskTimestamp <= endOfPeriod;
         });
 
         const completedTasks = tasksInPeriod.filter(t => t.completed);
-        const statsText = document.getElementById(textId);
 
-        if (this[chartInstance]) {
-            this[chartInstance].destroy();
-        }
-
-        if (tasksInPeriod.length === 0) {
-            statsText.style.display = 'block';
-            statsText.innerHTML = isDaily ? '今日無任務' : '本月無任務';
-            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        if (completedTasks.length === 0) {
+            container.innerHTML = `<div class="no-data-message">${isDaily ? '完成任務後<br>將顯示圖表' : '完成本月任務後<br>將顯示分析圖表'}</div>`;
             return;
         }
 
         const quadrantScores = { 'A': 4, 'B': 3, 'C': 2, 'D': 1 };
         let totalPossibleScore = 0;
         let earnedScore = 0;
+        tasksInPeriod.forEach(task => { totalPossibleScore += quadrantScores[task.quadrant] || 0; });
+        completedTasks.forEach(task => { earnedScore += quadrantScores[task.quadrant] || 0; });
 
-        tasksInPeriod.forEach(task => {
-            totalPossibleScore += quadrantScores[task.quadrant] || 0;
-        });
+        const dataForD3 = [];
+        const quadrantCounts = { 'A': 0, 'B': 0, 'C': 0, 'D': 0 };
+        completedTasks.forEach(task => { quadrantCounts[task.quadrant]++; });
 
-        completedTasks.forEach(task => {
-            earnedScore += quadrantScores[task.quadrant] || 0;
-        });
+        for (const key in quadrantCounts) {
+            if (quadrantCounts[key] > 0) {
+                dataForD3.push({
+                    quadrant: key,
+                    label: this.quadrantColors[key].name,
+                    value: quadrantCounts[key]
+                });
+            }
+        }
+
+        const width = container.clientWidth;
+        const height = width;
+        const radius = Math.min(width, height) / 2.2 - 10;
+
+        const svg = d3.select("#" + containerId)
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .append("g")
+            .attr("transform", `translate(${width / 2}, ${height / 2})`);
+
+        const defs = svg.append("defs");
+        const gradientColors = {
+            'A': ['rgba(255, 97, 86, 0.9)', 'rgba(201, 34, 22, 0.6)'],
+            'B': ['rgba(72, 253, 163, 0.9)', 'rgba(56, 185, 121, 0.6)'],
+            'C': ['rgba(144, 160, 255, 0.9)', 'rgba(90, 110, 224, 0.6)'],
+            'D': ['rgba(203, 145, 226, 0.9)', 'rgba(160, 84, 184, 0.6)']
+        };
+
+        for (const key in gradientColors) {
+            const gradient = defs.append("radialGradient")
+                .attr("id", `gradient-${key}`)
+                .attr("cx", "50%").attr("cy", "50%").attr("r", "50%").attr("fx", "50%").attr("fy", "50%");
+
+            gradient.append("stop").attr("offset", "0%").style("stop-color", gradientColors[key][0]);
+            gradient.append("stop").attr("offset", "100%").style("stop-color", gradientColors[key][1]);
+        }
+
+        const pie = d3.pie().value(d => d.value).sort(null);
+        const arc = d3.arc().innerRadius(radius * 0.65).outerRadius(radius);
+
+        svg.selectAll('path')
+            .data(pie(dataForD3))
+            .enter()
+            .append('path')
+            .attr('d', arc)
+            .attr('fill', d => `url(#gradient-${d.data.quadrant})`)
+            .attr('stroke', 'white')
+            .style('stroke-width', '2px');
+
+        const centerText = svg.append("text")
+            .attr("text-anchor", "middle")
+            .style("font-family", "inherit")
+            .style("fill", "#966232ff");
 
         if (isDaily) {
-            statsText.innerHTML = `今日分數<br><strong style="font-size: 1.8rem;">${earnedScore}</strong> / ${totalPossibleScore}`;
+            centerText.append("tspan")
+                .attr("x", 0)
+                .attr("dy", "-0.1em")
+                .style("font-size", `${radius * 0.35}px`)
+                .style("font-weight", "bold")
+                .text(earnedScore);
+            centerText.append("tspan")
+                .attr("x", 0)
+                .attr("dy", "1.2em")
+                .style("font-size", `${radius * 0.18}px`)
+                .text(` / ${totalPossibleScore}`);
         } else {
             const title = this.getMonthlyTitle(earnedScore);
-            statsText.innerHTML = `
-                            <span style="font-size: 1.1rem; font-weight: bold; color: #85582B;">${title}</span>
-                            <br>本月分數<br>
-                            <strong style="font-size: 1.8rem;">${earnedScore}</strong> / ${totalPossibleScore}`;
+            centerText.append("tspan")
+                .attr("x", 0)
+                .attr("dy", "-0.4em")
+                .style("font-size", `${radius * 0.2}px`)
+                .style("font-weight", "bold")
+                .text(title);
+            centerText.append("tspan")
+                .attr("x", 0)
+                .attr("dy", "1.3em")
+                .style("font-size", `${radius * 0.3}px`)
+                .text(`${earnedScore} / ${totalPossibleScore}`);
         }
-        statsText.style.display = 'block';
-
-        if (completedTasks.length === 0) {
-            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-            return;
-        }
-
-        const quadrantCounts = { 'A': 0, 'B': 0, 'C': 0, 'D': 0 };
-        completedTasks.forEach(task => {
-            quadrantCounts[task.quadrant]++;
-        });
-
-        const chartData = {
-            labels: [],
-            datasets: [{
-                data: [],
-                backgroundColor: [],
-                borderColor: 'white',
-                borderWidth: 2
-            }]
-        };
-
-        for (const key in quadrantCounts) {
-            if (quadrantCounts[key] > 0) {
-                chartData.labels.push(this.quadrantColors[key].name);
-                chartData.datasets[0].data.push(quadrantCounts[key]);
-            }
-        }
-
-        // --- 漸層色彩邏輯 ---
-        const gradientColors = {
-            'A': ['#ff8a80', '#f44336'], 'B': ['#a5d6a7', '#4caf50'],
-            'C': ['#9fa8da', '#3f51b5'], 'D': ['#ce93d8', '#9c27b0']
-        };
-
-        const backgroundColors = [];
-        for (const key in quadrantCounts) {
-            if (quadrantCounts[key] > 0) {
-                const gradient = ctx.createRadialGradient(100, 100, 10, 100, 100, 100);
-                const colors = gradientColors[key] || ['#cccccc', '#999999'];
-                gradient.addColorStop(0.9, colors[0]);
-                gradient.addColorStop(0.1, colors[1]);
-                backgroundColors.push(gradient);
-            }
-        }
-        chartData.datasets[0].backgroundColor = backgroundColors;
-
-        this[chartInstance] = new Chart(ctx, {
-            type: 'pie',
-            data: chartData,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'bottom',
-                        labels: { font: { size: 10 }, color: '#633909' }
-                    }
-                }
-            }
-        });
     },
 
     exportData() {
@@ -1511,44 +1462,62 @@ const HabitTracker = {
         const habitElement = document.querySelector(`.habit-item[data-id="${id}"]`);
         if (!habitElement) return;
 
-        const inputField = habitElement.querySelector('.habit-edit-input');
-
-        if (inputField) {
-            this.saveEditedHabit(id);
-        } else {
-            const habit = this.habits.find(h => h.id === id);
-            if (!habit) return;
-
-            const nameSpan = habitElement.querySelector('.habit-name');
-            const editButton = habitElement.querySelector('.habit-actions button:first-child');
-            const deleteButton = habitElement.querySelector('.habit-actions button:last-child');
-
-            nameSpan.innerHTML = `<input type="text" class="habit-edit-input" value="${habit.name}">`;
-
-            editButton.innerHTML = `💾`;
-            editButton.setAttribute('onclick', `HabitTracker.saveEditedHabit(${id})`);
-
-            deleteButton.innerHTML = `❌`;
-            deleteButton.setAttribute('onclick', `HabitTracker.renderHabits()`);
+        if (habitElement.querySelector('.habit-edit-input')) {
+            return;
         }
+
+        const habit = this.habits.find(h => h.id === id);
+        if (!habit) return;
+
+        const nameSpan = habitElement.querySelector('.habit-name');
+        nameSpan.innerHTML = `<input type="text" class="input-field-Details habit-edit-input" value="${habit.name}">`;
+
+        const inputField = nameSpan.querySelector('.habit-edit-input');
+        inputField.focus();
+        inputField.select();
+
+        const actionsContainer = habitElement.querySelector('.habit-actions');
+        if (!actionsContainer) {
+            console.error("找不到 .habit-actions 容器！");
+            return;
+        }
+
+        actionsContainer.innerHTML = '';
+
+        const saveButton = document.createElement('button');
+        const cancelButton = document.createElement('button');
+
+        saveButton.classList.add('btn-save-unified');
+        cancelButton.classList.add('btn-cancel-unified');
+
+        saveButton.innerHTML = '💾';
+        cancelButton.innerHTML = '❌';
+
+        saveButton.addEventListener('click', () => {
+            this.saveEditedHabit(id);
+        });
+
+        cancelButton.addEventListener('click', () => {
+            this.renderHabits();
+        });
+        actionsContainer.append(saveButton, cancelButton);
     },
 
     saveEditedHabit(id) {
         const habitElement = document.querySelector(`.habit-item[data-id="${id}"]`);
         if (!habitElement) return;
 
-        const newName = habitElement.querySelector('.habit-edit-input').value.trim();
-        if (!newName) {
-            alert('習慣名稱不可為空！');
-            return;
-        }
+        const inputField = habitElement.querySelector('.habit-edit-input');
+        if (!inputField) return;
 
-        const habit = this.habits.find(h => h.id === id);
-        if (habit) {
-            habit.name = newName;
-            this.saveData();
-            this.renderHabits();
-            this.renderReportChart();
+        const newName = inputField.value.trim();
+        if (newName) {
+            const habit = this.habits.find(h => h.id === id);
+            if (habit) {
+                habit.name = newName;
+                this.saveData();
+                this.renderHabits();
+            }
         }
     },
 
@@ -1577,31 +1546,31 @@ const HabitTracker = {
             const isCompletedToday = habit.checkIns.some(ts => this.getLocalDateString(ts) === todayStr);
 
             return `
-                        <div class="habit-item" data-id="${habit.id}" style="border-left-color: ${milestone.color};">
-                            <div class="habit-main-row">
-                                <button 
-                                    class="habit-check-toggle ${isCompletedToday ? 'completed' : ''}" 
-                                    onclick="HabitTracker.checkInHabit(${habit.id})"
-                                    ${isCompletedToday ? 'disabled' : ''}>
-                                    ${isCompletedToday ? '✔' : ''}
-                                </button>
-                                <span class="habit-name">${habit.name}</span>
-                                <div class="habit-actions">
-                                    <button class="btn-pin" style="padding: 8px;" onclick="HabitTracker.editHabit(${habit.id})">✏️</button>
-                                    <button class="btn-delete" style="font-size: 1rem; padding: 8px;" onclick="HabitTracker.deleteHabit(${habit.id})">🗑️</button>
-                                </div>
-                            </div>
-                            <div class="habit-progress-details">
-                                <div class="habit-progress-text">
-                                    <span>等級 ${milestone.level}: ${milestone.name}</span>
-                                    <span>總完成: ${checkInCount} / ${milestone.nextMilestone} 次</span>
-                                </div>
-                                <div class="habit-progress-bar-container">
-                                    <div class="habit-progress-bar" style="width: ${milestone.progress}%; background-color: ${milestone.color};"></div>
-                                </div>
+                    <div class="habit-item" data-id="${habit.id}" style="border-left-color: ${milestone.color};">
+                        <div class="habit-main-row">
+                            <button
+                                class="habit-check-toggle ${isCompletedToday ? 'completed' : ''}"
+                                onclick="HabitTracker.checkInHabit(${habit.id})"
+                                ${isCompletedToday ? 'disabled' : ''}>
+                                ${isCompletedToday ? '✔' : ''}
+                            </button>
+                            <span class="habit-name">${habit.name}</span>
+                            <div class="habit-actions">
+                                <button class="btn-pin" onclick="HabitTracker.editHabit(${habit.id})">✏️</button>
+                                <button class="btn-delete" onclick="HabitTracker.deleteHabit(${habit.id})">🗑️</button>
                             </div>
                         </div>
-                    `;
+                        <div class="habit-progress-details">
+                            <div class="habit-progress-text">
+                                <span>等級 ${milestone.level}: ${milestone.name}</span>
+                                <span>總完成: ${checkInCount} / ${milestone.nextMilestone} 次</span>
+                            </div>
+                            <div class="habit-progress-bar-container">
+                                <div class="habit-progress-bar" style="width: ${milestone.progress}%; background-color: ${milestone.color};"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
         }).join('');
 
         container.innerHTML = html;
@@ -1775,12 +1744,136 @@ const HabitTracker = {
         reader.readAsText(file);
     },
 };
+
+// --- 主動式 AI 管理器 (Proactive AI Manager) ---
+const ProactiveAIManager = {
+    lastTriggered: {},
+
+    async checkTriggers(event) {
+        console.log(`[AI Manager] 收到事件: ${event.type}`, event.data);
+
+        if (event.type === 'TASK_STATE_CHANGED') {
+            await this.checkTaskRules();
+        }
+        if (event.type === 'HABIT_CHECKED_IN') {
+            await this.checkHabitRules(event.data.habitId);
+        }
+        if (event.type === 'MOOD_ENTRY_SAVED') {
+            await this.checkMoodRules();
+        }
+    },
+
+    async checkTaskRules() {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const allTasks = await DBHelper.getAll('tasks') || [];
+        const todayTasks = allTasks.filter(t => t.date === todayStr);
+        if (todayTasks.length === 0) return;
+
+        const completedTasks = todayTasks.filter(t => t.completed);
+        const quadrantScores = { 'A': 4, 'B': 3, 'C': 2, 'D': 1 };
+        const totalScore = completedTasks.reduce((sum, task) => sum + (quadrantScores[task.quadrant] || 0), 0);
+
+        if (totalScore >= 20 && this.canTrigger('taskScoreHigh20')) {
+            const prompt = `[系統指令] 使用者今天生產力爆發，任務總得分已達 ${totalScore} 分。充滿活力的語氣恭喜，並溫馨提醒記得要適度休息。`;
+            this.triggerAI(prompt, 'taskScoreHigh20');
+        }
+
+        const uncompletedImportantTasks = todayTasks.filter(t => !t.completed && (t.quadrant === 'A' || t.quadrant === 'B')).length;
+        if (new Date().getHours() >= 19 && uncompletedImportantTasks > 2 && this.canTrigger('taskRemindLate')) {
+            const prompt = `[系統指令] 現在已經晚上，使用者還有 ${uncompletedImportantTasks} 個重要任務尚未完成。用溫和語氣提醒。`;
+            this.triggerAI(prompt, 'taskRemindLate');
+        }
+    },
+
+    async checkHabitRules(justCompletedHabitId) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const allHabits = await DBHelper.getAll('habits') || [];
+
+        const todayCompletedHabits = allHabits.filter(h => h.checkIns.some(ts => new Date(ts).toISOString().split('T')[0] === todayStr));
+        if (todayCompletedHabits.length === 3 && this.canTrigger('habitMilestone3')) {
+            const completedNames = todayCompletedHabits.map(h => `「${h.name}」`).join('、');
+            const prompt = `[系統指令] 使用者展現了毅力，今天已經完成 ${completedNames} 共 3 個習慣！請稱讚並鼓勵繼續保持。`;
+            this.triggerAI(prompt, 'habitMilestone3');
+        }
+
+        const habit = allHabits.find(h => h.id === justCompletedHabitId);
+        if (!habit) return;
+
+        const oldMilestone = HabitTracker.calculateMilestone(habit.checkIns.length - 1);
+        const newMilestone = HabitTracker.calculateMilestone(habit.checkIns.length);
+
+        if (newMilestone.level > oldMilestone.level && this.canTrigger(`habitLevelUp_${habit.id}`)) {
+            const prompt = `[系統指令] 使用者的習慣「${habit.name}」剛剛升級到了 Lv.${newMilestone.level} - ${newMilestone.name}！請為他的努力和堅持給予祝賀。`;
+            this.triggerAI(prompt, `habitLevelUp_${habit.id}`);
+        }
+    },
+
+    async checkMoodRules() {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const allMoods = await DBHelper.getAll('moods') || [];
+        const todayEntries = allMoods.filter(e => e.date === todayStr);
+        if (todayEntries.length < 2) return;
+
+        const moodValue = { '快樂': 5, '感恩': 4, '平靜': 3, '疲憊': 1, '壓力': -2 };
+        let totalScore = 0;
+        let moodCount = 0;
+        todayEntries.forEach(entry => {
+            entry.moods.forEach(mood => {
+                totalScore += (moodValue[mood] || 0);
+                moodCount++;
+            });
+        });
+
+        if (moodCount === 0) return;
+        const averageScore = totalScore / moodCount;
+
+        if (averageScore >= 4.5 && this.canTrigger('moodHigh')) {
+            const prompt = `[系統指令] 偵測到使用者今天的心情指數高達 ${averageScore.toFixed(1)} 分！這真是美好的一天。祝賀與喜悅。`;
+            this.triggerAI(prompt, 'moodHigh');
+        }
+        if (averageScore <= 2.0 && this.canTrigger('moodLow')) {
+            const prompt = `[系統指令] 偵測到使用者今天的心情指數偏低，只有 ${averageScore.toFixed(1)} 分。以溫和支持語氣關心，提供一些能緩和情緒的建議（例如深呼吸、聽音樂、散步），但不要過度追問。`;
+            this.triggerAI(prompt, 'moodLow');
+        }
+    },
+
+    canTrigger(ruleId) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (this.lastTriggered[ruleId] !== todayStr) {
+            return true;
+        }
+        return false;
+    },
+
+    triggerAI(systemInstruction, ruleId) {
+        console.log(`[AI Manager] 觸發規則 "${ruleId}"`);
+        FloatingAIChat.sendSystemMessage(systemInstruction);
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        this.lastTriggered[ruleId] = todayStr;
+        DBHelper.put('appState', { key: 'proactiveAITriggers', value: this.lastTriggered });
+    },
+
+    async init() {
+        const savedTriggers = await DBHelper.get('appState', 'proactiveAITriggers');
+        if (savedTriggers) {
+            this.lastTriggered = savedTriggers.value;
+        }
+    }
+};
+
 // --- 浮動 AI 聊天室模組 ---
 const FloatingAIChat = {
     isWindowOpen: false,
     chatHistory: [],
     isLoading: false,
     attachedFile: null,
+    currentAIController: null,
+    sendIconSVG: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M10 14l11 -11" /><path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5" /></svg>`,
+    stopIconSVG: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M17 4h-10a3 3 0 0 0 -3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3 -3v-10a3 3 0 0 0 -3 -3z" stroke-width="0" fill="currentColor" />
+</svg>`,
 
     async init() {
         const storedHistory = await DBHelper.get('appState', 'floatingChatHistory');
@@ -1796,15 +1889,115 @@ const FloatingAIChat = {
         const chatInput = document.getElementById('ai-chat-input');
         if (chatInput) {
             chatInput.addEventListener('keypress', (event) => this.handleChatKeypress(event));
+            chatInput.addEventListener('paste', (event) => this.handlePaste(event));
+        }
+    },
+
+    showContextMenu(event, messageIndex) {
+        this.hideContextMenu();
+        const menu = document.getElementById('chat-context-menu');
+        const chatWindow = document.getElementById('ai-chat-window');
+        if (!menu || !chatWindow) return;
+
+        menu.classList.remove('hidden');
+
+        const rect = chatWindow.getBoundingClientRect();
+        let x, y;
+
+        if (event.touches) {
+            x = event.touches[0].clientX - rect.left;
+            y = event.touches[0].clientY - rect.top;
+        } else {
+            x = event.clientX - rect.left;
+            y = event.clientY - rect.top;
+        }
+
+        menu.style.left = `${x}px`;
+        menu.style.top = `${y}px`;
+
+        document.getElementById('ctx-copy-btn').onclick = () => this.copyMessage(messageIndex);
+        document.getElementById('ctx-quote-btn').onclick = () => this.quoteMessage(messageIndex);
+        document.getElementById('ctx-edit-btn').onclick = () => this.editMessage(messageIndex);
+        document.getElementById('ctx-delete-btn').onclick = () => this.deleteChatMessage(messageIndex);
+
+        document.getElementById('ctx-edit-btn').style.display = this.chatHistory[messageIndex].sender === 'user' ? 'block' : 'none';
+
+        setTimeout(() => document.addEventListener('click', this.hideContextMenu, { once: true }), 0);
+    },
+
+    hideContextMenu() {
+        const menu = document.getElementById('chat-context-menu');
+        if (menu) menu.classList.add('hidden');
+    },
+
+    copyMessage(index) {
+        const message = this.chatHistory[index].message;
+        navigator.clipboard.writeText(message).then(() => {
+            console.log('訊息已複製');
+        }).catch(err => {
+            console.error('複製失敗:', err);
+        });
+        this.hideContextMenu();
+    },
+
+    quoteMessage(index) {
+        const message = this.chatHistory[index].message;
+        const chatInput = document.getElementById('ai-chat-input');
+        chatInput.value = `> ${message.split('\n').join('\n> ')}\n\n`;
+        chatInput.focus();
+        this.hideContextMenu();
+    },
+
+    editMessage(index) {
+        this.chatHistory.forEach((msg, i) => {
+            if (i !== index) delete msg.isEditing;
+        });
+        this.chatHistory[index].isEditing = true;
+        this.renderChatHistory();
+        this.hideContextMenu();
+    },
+
+    saveEditedMessage(index, newMessage) {
+        const chatMessages = document.getElementById('ai-chat-messages');
+        const scrollPosition = chatMessages.scrollTop;
+
+        if (newMessage.trim() !== "") {
+            this.chatHistory[index].message = newMessage.trim();
+        }
+        delete this.chatHistory[index].isEditing;
+        this.saveChatHistory();
+        this.renderChatHistory();
+
+        chatMessages.scrollTop = scrollPosition;
+    },
+
+    cancelEdit(index) {
+        const chatMessages = document.getElementById('ai-chat-messages');
+        const scrollPosition = chatMessages.scrollTop;
+
+        delete this.chatHistory[index].isEditing;
+        this.renderChatHistory();
+
+        chatMessages.scrollTop = scrollPosition;
+    },
+
+    handlePaste(event) {
+        const items = event.clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf("image") !== -1) {
+                const file = items[i].getAsFile();
+                const mockEvent = { target: { files: [file] } };
+                this.handleFileSelect(mockEvent);
+                event.preventDefault();
+                break;
+            }
         }
     },
 
     handleFileSelect(event) {
         const file = event.target.files[0];
         if (!file) return;
-
         const reader = new FileReader();
-
         reader.onload = (e) => {
             this.attachedFile = {
                 name: file.name,
@@ -1813,34 +2006,30 @@ const FloatingAIChat = {
             };
             this.displayFilePreview(file, e.target.result);
         };
-
         if (file.type.startsWith('image/')) {
             reader.readAsDataURL(file);
         } else {
             reader.readAsText(file, 'UTF-8');
         }
-
         event.target.value = '';
     },
 
     displayFilePreview(file, dataUrl) {
         const container = document.getElementById('file-preview-container');
         let previewHTML = '';
-
         if (file.type.startsWith('image/')) {
             previewHTML = `<img src="${dataUrl}" alt="Image preview">`;
         } else {
             previewHTML = `<div style="font-size: 2rem;">📄</div>`;
         }
-
         container.innerHTML = `
-                        ${previewHTML}
-                        <div class="file-info">
-                            <span>${file.name}</span>
-                            (${(file.size / 1024).toFixed(2)} KB)
-                        </div>
-                        <button onclick="FloatingAIChat.clearAttachedFile()">×</button>
-                    `;
+            ${previewHTML}
+            <div class="file-info">
+                <span>${file.name}</span>
+                (${(file.size / 1024).toFixed(2)} KB)
+            </div>
+            <button onclick="FloatingAIChat.clearAttachedFile()">×</button>
+        `;
         container.classList.remove('hidden');
     },
 
@@ -1850,6 +2039,7 @@ const FloatingAIChat = {
         container.innerHTML = '';
         container.classList.add('hidden');
     },
+
     toggleWindow() {
         this.isWindowOpen = !this.isWindowOpen;
         const windowEl = document.getElementById('ai-chat-window');
@@ -1868,33 +2058,78 @@ const FloatingAIChat = {
         if (!chatMessages) return;
         chatMessages.innerHTML = '';
         if (this.chatHistory.length === 0) {
-            chatMessages.innerHTML = `<div class="chat-message ai">你好，我是你的 AI 心情助手，有什麼事想聊聊嗎？</div>`;
+            chatMessages.innerHTML = `<div class="chat-message-container"><div class="chat-message ai">你好，我是你的 AI 心情助手，有什麼事想聊聊嗎？</div></div>`;
             chatMessages.scrollTop = chatMessages.scrollHeight;
             return;
         }
+
         this.chatHistory.forEach((msg, index) => {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `chat-message-container`;
-
-            let deleteButtonHTML = (msg.sender !== 'ai-loading')
-                ? `<button class="btn-delete-chat" onclick="FloatingAIChat.deleteChatMessage(${index})">🗑️</button>`
-                : '';
-
+            const messageContainer = document.createElement('div');
+            messageContainer.className = `chat-message-container`;
+            if (msg.sender === 'user') {
+                messageContainer.classList.add('user-container');
+            }
             let filePreviewHTML = '';
-            if (msg.file) {
+            if (msg.file && !msg.isEditing) {
                 if (msg.file.type.startsWith('image/')) {
-                    filePreviewHTML = `<img src="data:${msg.file.type};base64,${msg.file.content}" style="max-width: 100px; max-height: 100px; border-radius: 5px; margin-top: 5px;" />`;
+                    filePreviewHTML = `<img src="data:${msg.file.type};base64,${msg.file.content}" class="chat-message-image-preview" />`;
                 } else {
-                    filePreviewHTML = `<div style="font-size: 0.8em; color: #666; background: #eee; padding: 3px 6px; border-radius: 4px; margin-top: 5px;">📄 ${msg.file.name}</div>`;
+                    filePreviewHTML = `<div class="chat-message-file-preview">📄 ${msg.file.name}</div>`;
                 }
             }
+            const messageBubble = document.createElement('div');
+            messageBubble.className = `chat-message ${msg.sender}`;
 
-            if (msg.sender === 'user') {
-                messageDiv.innerHTML = `${deleteButtonHTML}<div class="chat-message user">${msg.message}${filePreviewHTML}</div>`;
+            if (msg.sender === 'ai-loading') {
+                const loadingText = "AI 思考中";
+                messageBubble.innerHTML = loadingText.split('').map((char, i) =>
+                    `<span style="--delay: ${i * 0.1}s;">${char}</span>`
+                ).join('');
+            } else if (msg.isEditing) {
+                const editContainer = document.createElement('div');
+                editContainer.className = 'edit-container';
+                editContainer.innerHTML = `
+                    <textarea class="edit-textarea">${msg.message}</textarea>
+                    <div class="edit-buttons">
+                        <button class="btn-save-unified">💾</button>
+                        <button class="btn-cancel-unified">❌</button>
+                    </div>
+                `;
+                editContainer.querySelector('.btn-save-unified').onclick = () => this.saveEditedMessage(index, editContainer.querySelector('.edit-textarea').value);
+                editContainer.querySelector('.btn-cancel-unified').onclick = () => this.cancelEdit(index);
+
+                const textarea = editContainer.querySelector('.edit-textarea');
+                setTimeout(() => {
+                    textarea.style.height = 'auto';
+                    textarea.style.height = (textarea.scrollHeight) + 'px';
+                    textarea.focus();
+                    textarea.selectionStart = textarea.selectionEnd = textarea.value.length;
+                }, 0);
+                messageBubble.innerHTML = '';
+                messageBubble.appendChild(editContainer);
             } else {
-                messageDiv.innerHTML = `<div class="chat-message ${msg.sender}">${msg.message}</div>${deleteButtonHTML}`;
+                let markdownHTML = marked.parse(msg.message || '');
+                markdownHTML = markdownHTML.replace(/<p>\s*<\/p>$/g, '').replace(/\s+$/g, '');
+                messageBubble.innerHTML = `${filePreviewHTML}${DOMPurify.sanitize(markdownHTML)}`;
             }
-            chatMessages.appendChild(messageDiv);
+
+            if (msg.sender !== 'ai-loading' && !msg.isEditing) {
+                messageBubble.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    this.showContextMenu(e, index);
+                });
+                let pressTimer;
+                messageBubble.addEventListener('touchstart', (e) => {
+                    pressTimer = window.setTimeout(() => {
+                        e.preventDefault();
+                        this.showContextMenu(e, index);
+                    }, 500);
+                });
+                messageBubble.addEventListener('touchend', () => clearTimeout(pressTimer));
+                messageBubble.addEventListener('touchmove', () => clearTimeout(pressTimer));
+            }
+            messageContainer.appendChild(messageBubble);
+            chatMessages.appendChild(messageContainer);
         });
         chatMessages.scrollTop = chatMessages.scrollHeight;
     },
@@ -1913,9 +2148,16 @@ const FloatingAIChat = {
     },
 
     deleteChatMessage(index) {
-        this.chatHistory.splice(index, 1);
-        this.saveChatHistory();
-        this.renderChatHistory();
+        if (confirm('您確定要刪除這則訊息嗎？')) {
+            const chatMessages = document.getElementById('ai-chat-messages');
+            const scrollPosition = chatMessages.scrollTop;
+            this.chatHistory.splice(index, 1);
+            this.saveChatHistory();
+            this.renderChatHistory();
+
+            chatMessages.scrollTop = scrollPosition;
+        }
+        this.hideContextMenu();
     },
 
     handleChatKeypress(event) {
@@ -1945,10 +2187,8 @@ const FloatingAIChat = {
                 this.isLoading = true;
             }
         }
-
         this.saveChatHistory();
         this.renderChatHistory();
-
         if (sender === 'ai' && !this.isWindowOpen) {
             const notification = document.getElementById('ai-chat-notification');
             if (notification) {
@@ -2034,7 +2274,7 @@ const FloatingAIChat = {
         return finalPrompt;
     },
 
-    async _callAIAPI(apiKey, model, body) {
+    async _callAIAPI(apiKey, model, body, signal) {
         let apiUrl = '';
         const headers = {
             'Content-Type': 'application/json',
@@ -2058,11 +2298,11 @@ const FloatingAIChat = {
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: headers,
-            body: JSON.stringify(body)
+            body: JSON.stringify(body),
+            signal: signal
         });
 
         const result = await response.json();
-
         if (!response.ok) {
             console.error("AI API Error Details:", result);
             const errorMessage = result?.error?.message || `HTTP 錯誤! 狀態碼: ${response.status}`;
@@ -2086,11 +2326,27 @@ const FloatingAIChat = {
         return aiResponse;
     },
 
+    abortAICall() {
+        if (this.currentAIController) {
+            this.currentAIController.abort();
+            console.log('AI request aborted by user.');
+
+            const sendBtn = document.getElementById('ai-chat-send-btn');
+            const input = document.getElementById('ai-chat-input');
+            input.disabled = false;
+            sendBtn.innerHTML = this.sendIconSVG;
+            sendBtn.onclick = () => this.sendChatMessage();
+            this.currentAIController = null;
+        }
+    },
+
     async sendChatMessage() {
         const input = document.getElementById('ai-chat-input');
+        const sendBtn = document.getElementById('ai-chat-send-btn');
         const message = input.value.trim();
 
         if (!message && !this.attachedFile) return;
+        if (this.isLoading) return;
 
         const selectedKeyName = MoodTracker.settings.selectedApiKeyName;
         const apiKeyEntry = MoodTracker.settings.apiKeys.find(k => k.name === selectedKeyName);
@@ -2099,23 +2355,31 @@ const FloatingAIChat = {
         }
 
         const messagePayload = {
-            message: message || `請分析這個檔案：${this.attachedFile.name}`,
+            message: message || `Analyze this file:${this.attachedFile.name}`,
             sender: 'user',
             file: this.attachedFile
         };
 
         this.addChatMessage(messagePayload, 'user');
         input.value = '';
+        autoResizeTextarea(input);
         InputSaver.clear('ai-chat-input');
         this.clearAttachedFile();
 
         input.disabled = true;
-        this.addChatMessage("AI 正在思考中...", 'ai-loading');
+        this.addChatMessage("AI 思考中", 'ai-loading');
+
+        this.currentAIController = new AbortController();
+        const signal = this.currentAIController.signal;
+
+        sendBtn.innerHTML = this.stopIconSVG;
+        sendBtn.onclick = () => this.abortAICall();
+        sendBtn.disabled = false;
 
         try {
             const now = new Date();
             const currentTimeString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-            const basePrompt = (MoodTracker.settings.aiPrompt || "") + `\n\n[系統註記] 使用者發送此訊息的當前時間是：${currentTimeString}。`;
+            const basePrompt = (MoodTracker.settings.aiPrompt || "") + `\n\n[System note] User sent this message at:${currentTimeString}。`;
             const finalPrompt = await this.prepareAIPrompt(basePrompt);
             const selectedModel = MoodTracker.settings.model || 'gemini-2.5-flash';
 
@@ -2129,15 +2393,13 @@ const FloatingAIChat = {
                 .map(msg => {
                     const role = msg.sender === 'user' ? 'user' : 'model';
                     const parts = [];
-
                     if (msg.message && typeof msg.message === 'string') {
                         parts.push({ text: msg.message });
                     }
-
                     if (msg.sender === 'user' && msg.file) {
                         if (!msg.file.type.startsWith('image/')) {
                             const fileText = atob(msg.file.content);
-                            parts.push({ text: `\n\n--- 附檔 (${msg.file.name}) ---\n${fileText}\n--- 附檔結束 ---` });
+                            parts.push({ text: `\n\n <Attachment> ${msg.file.name} \n${fileText}\n </Attachment>` });
                         } else {
                             parts.push({
                                 inlineData: {
@@ -2147,40 +2409,32 @@ const FloatingAIChat = {
                             });
                         }
                     }
-
                     return { role, parts };
                 });
-
 
             let body = {};
             if (selectedModel.includes('gemini')) {
                 body = {
                     contents: [
                         { role: "user", parts: [{ text: finalPrompt }] },
-                        { role: "model", parts: [{ text: "好的，我已了解我的角色設定與背景資訊。請使用者開始提問。" }] },
+                        { role: "model", parts: [{ text: "OK." }] },
                         ...historyForApi
                     ]
                 };
             } else {
                 const openAIHistory = historyForApi.map(msg => {
                     const contentParts = msg.parts.map(part => {
-                        if (part.text) {
-                            return { type: "text", text: part.text };
-                        }
+                        if (part.text) return { type: "text", text: part.text };
                         if (part.inlineData) {
                             return {
                                 type: "image_url",
-                                image_url: {
-                                    url: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`
-                                }
+                                image_url: { url: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}` }
                             };
                         }
                         return null;
                     }).filter(Boolean);
-
                     return { role: msg.role === 'model' ? 'assistant' : 'user', content: contentParts };
                 });
-
                 body = {
                     model: selectedModel,
                     messages: [
@@ -2190,16 +2444,27 @@ const FloatingAIChat = {
                 };
             }
 
-            const aiResponse = await this._callAIAPI(apiKeyEntry.value, selectedModel, body);
+            const aiResponse = await this._callAIAPI(apiKeyEntry.value, selectedModel, body, signal);
             this.addChatMessage(aiResponse, 'ai');
 
         } catch (error) {
-            console.error('AI API 請求失敗:', error);
-            const errorMessage = `抱歉，與 AI 連線時發生錯誤。\n錯誤詳情: ${error.message}\n(你可以點擊此訊息將其刪除)`;
-            this.addChatMessage(errorMessage, 'ai');
+            if (error.name === 'AbortError') {
+                const abortedMessage = 'AI 回應已被您中斷。';
+                this.addChatMessage(abortedMessage, 'ai');
+            } else {
+                console.error('AI API 請求失敗:', error);
+                const errorMessage = `與 AI 連線時發生錯誤。\n錯誤詳情: ${error.message}\n`;
+                this.addChatMessage(errorMessage, 'ai');
+            }
         } finally {
-            input.disabled = false;
-            input.focus();
+            if (this.currentAIController) {
+                input.disabled = false;
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = this.sendIconSVG;
+                sendBtn.onclick = () => this.sendChatMessage();
+                this.currentAIController = null;
+                input.focus();
+            }
         }
     },
 
@@ -2215,7 +2480,7 @@ const FloatingAIChat = {
             return;
         }
 
-        this.addChatMessage("AI 正在思考中...", 'ai-loading');
+        this.addChatMessage("AI 思考中", 'ai-loading');
 
         try {
             const basePrompt = (MoodTracker.settings.aiPrompt || "") + "\n\n" + systemInstruction;
@@ -2223,7 +2488,7 @@ const FloatingAIChat = {
             const selectedModel = MoodTracker.settings.model || 'gemini-2.5-flash';
 
             let body = {};
-            const userMessage = "請根據你收到的系統指令與情境，給我一個自然且符合角色的回應。";
+            const userMessage = "Respond naturally and contextually based on all received information."; //Prompt
 
             if (selectedModel.includes('gemini')) {
                 body = { contents: [{ role: "user", parts: [{ text: finalPrompt + "\n\n" + userMessage }] }] };
@@ -2237,7 +2502,7 @@ const FloatingAIChat = {
                 };
             }
 
-            const aiResponse = await this._callAIAPI(apiKeyEntry.value, selectedModel, body);
+            const aiResponse = await this._callAIAPI(apiKeyEntry.value, selectedModel, body, new AbortController().signal);
             this.addChatMessage(aiResponse, 'ai');
 
         } catch (error) {
@@ -2262,11 +2527,20 @@ const FloatingAIChat = {
         alert('AI 聊天記錄匯出成功！');
     },
 };
+
 // --- 心情追蹤模組 ---
 const MoodTracker = {
+    getLocalDateString(date = new Date()) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    },
     moodData: [],
+    draggedItemId: null,
+    dragOverItemId: null,
     settings: {
-        apiKeys: [], // { name: 'key_name', value: 'key_value' }
+        apiKeys: [],
         selectedApiKeyName: '',
         model: "gemini-2.5-flash",
         aiPrompt: "",
@@ -2285,6 +2559,11 @@ const MoodTracker = {
         this.updateYesterdayReview();
         this.renderPinnedNotes();
 
+        document.getElementById('general-mood-image').addEventListener('change', (e) => this.handleImagePreview(e));
+        const moodContentTextarea = document.getElementById('general-mood-content');
+        if (moodContentTextarea) {
+            moodContentTextarea.addEventListener('paste', (e) => this.handlePaste(e));
+        }
         document.getElementById('add-api-key-btn').addEventListener('click', () => this.addApiKey());
         document.getElementById('delete-api-key-btn').addEventListener('click', () => this.deleteSelectedApiKey());
         document.getElementById('note-type-selector').addEventListener('click', (e) => {
@@ -2320,14 +2599,14 @@ const MoodTracker = {
                 apiKeySelect.appendChild(option);
             }
 
-            document.getElementById('ai-prompt').value = this.settings.aiPrompt || `你是一個富含創意的陪伴型AI助手，你能精準的掌握使用者的需求與愛好，陪伴使用者用輕鬆但又自律的方式完成每日計畫。
-    - 語言需求：使用繁體中文，台灣用語。回應大約在100-150個字內。
+            document.getElementById('ai-prompt').value = this.settings.aiPrompt || `你是一個富含創意的陪伴型AI助手，你能精準的掌握使用者的需求與愛好，陪伴使用者用輕鬆但又自律的方式完成每日計畫，能夠適當督促使用者的作息與健康還有任務。
+    - 語言需求：使用繁體中文，台灣用語。日常回應大約100-150個字，分析與知識類型大約800字以內。
     - 語言風格：幽默，語言自然且貼近朋友，不須討好與安慰。
     - 使用者稱呼：
     - 使用者資訊：
-    - 心情數據：{{mood}}
-    - 習慣數據：{{habits}}
-    - 時間安排：{{schedule}}
+    - {{mood}}
+    - {{habits}}
+    - {{schedule}}
     - 可以將對話當前時間與以上記錄時間還有數據都考慮進去，若是遇到節日等等也能主動展現出特殊對話。`;
             document.getElementById('ai-model-select').value = this.settings.model || "gemini-2.5-flash";
             document.getElementById('context-length').value = this.settings.contextLength || 10;
@@ -2337,10 +2616,8 @@ const MoodTracker = {
 
     async loadData() {
         try {
-            // 從 IndexedDB 讀取資料
             this.moodData = await DBHelper.getAll('moods') || [];
 
-            // 從 appState 表中讀取設定
             const storedSettings = await DBHelper.get('appState', 'moodTrackerSettings');
             if (storedSettings) {
                 this.settings = { ...this.settings, ...storedSettings.value };
@@ -2458,41 +2735,62 @@ const MoodTracker = {
                             <div style="margin-bottom: 15px; font-size: 0.9rem;">
                                 <strong>${entry.type === 'morning' ? '☀️ 起床' : (entry.type === 'evening' ? '🌙 睡前' : '📝 筆記')} (${entry.time})</strong>
                                 <div>${entry.moods.map(m => `<span class="mood-tag selected" style="font-size:0.8rem; padding: 2px 8px; cursor:default;">${m}</span>`).join(' ')}</div>
-                                <div style="margin-top: 5px; color: #555; word-break: break-all;">${DOMPurify.sanitize(marked.parse(entry.content))}</div>
+                                <div style="margin-top: 5px; color: var(--secondary-font); word-break: break-all;">${DOMPurify.sanitize(marked.parse(entry.content))}</div>
                             </div>
                         `;
         });
         reviewDiv.innerHTML = html;
     },
 
-    saveGeneralEntry() {
+    async saveGeneralEntry() {
         const contentEl = document.getElementById('general-mood-content');
         const content = contentEl.value.trim();
-        if (!content) return alert('請輸入筆記內容');
+        const imageInput = document.getElementById('general-mood-image');
+        const file = imageInput.files[0];
+
+        if (!content && !file) return alert('請輸入筆記內容或附加一張圖片');
 
         const tagsContainer = document.getElementById('general-mood-tags');
         const selectedMoods = [...tagsContainer.querySelectorAll('.mood-tag.selected')].map(tag => tag.dataset.mood);
 
-        const type = document.querySelector('#note-type-selector .btn-pin.active').dataset.type;
+        const activeButton = document.querySelector('#note-type-selector .btn-pin.active');
+        if (!activeButton) {
+            alert('請先選擇筆記類型 (例如：起床、睡前或筆記)。');
+            return;
+        }
+        const type = activeButton.dataset.type;
 
         const now = new Date();
         const entry = {
             id: now.getTime(),
-            date: now.toISOString().split('T')[0],
+            date: this.getLocalDateString(now),
             time: now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
             type: type,
             moods: selectedMoods,
             content: content,
-            timestamp: now.toISOString()
+            timestamp: now.toISOString(),
+            file: null
         };
+
+        if (file) {
+            try {
+                entry.file = await this.readFileAsBase64(file);
+            } catch (error) {
+                console.error("圖片讀取失敗:", error);
+                alert("圖片讀取失敗，請稍後再試。");
+                return;
+            }
+        }
 
         this.moodData.unshift(entry);
         this.saveData();
 
         InputSaver.clear('general-mood-content');
-
         contentEl.value = '';
         tagsContainer.querySelectorAll('.mood-tag.selected').forEach(tag => tag.classList.remove('selected'));
+        imageInput.value = '';
+        document.getElementById('general-mood-image-preview').innerHTML = '';
+
         alert(`類型為「${type}」的筆記已儲存！`);
 
         ProactiveAIManager.checkTriggers({ type: 'MOOD_ENTRY_SAVED' });
@@ -2501,15 +2799,98 @@ const MoodTracker = {
         this.renderPinnedNotes();
     },
 
-    deleteEntry(id) {
-        if (confirm('確定要刪除這條筆記嗎？此操作無法復原。')) {
-            const entryDate = this.moodData.find(e => e.id === id)?.date;
-            this.moodData = this.moodData.filter(entry => entry.id !== id);
-            this.saveData();
-            this.togglePinEntry(id, true);
+    readFileAsBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve({
+                name: file.name,
+                type: file.type,
+                data: reader.result
+            });
+            reader.onerror = error => reject(error);
+            reader.readAsDataURL(file);
+        });
+    },
+
+    async deleteNoteImage(entryId, fromReviewPage = false) {
+        if (!confirm("確定要刪除這張圖片嗎？")) return;
+        const entry = this.moodData.find(e => e.id === entryId);
+
+        if (entry) {
+            if (!entry.content || entry.content.trim() === '') {
+                if (confirm("這則筆記沒有文字內容，刪除圖片將會一併刪除整則筆記。確定嗎？")) {
+                    await this.deleteEntry(entryId);
+                    this.renderPinnedNotes();
+                    if (fromReviewPage && selectedDateForReview) {
+                        this.loadReviewData(selectedDateForReview);
+                    }
+                    ImageMemory.render();
+                    return;
+                } else {
+                    return;
+                }
+            }
+
+            entry.file = null;
+            await this.saveData();
+            alert("圖片已刪除。");
+
+            this.renderPinnedNotes();
+            if (fromReviewPage && selectedDateForReview) {
+                this.loadReviewData(selectedDateForReview);
+            }
+        }
+    },
+
+    handleImagePreview(event) {
+        const previewContainer = document.getElementById('general-mood-image-preview');
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                previewContainer.innerHTML = `
+                <div class="note-image-preview-container">
+                    <img src="${e.target.result}" class="note-image-preview" alt="Image Preview">
+                    <button class="delete-image-btn" style="top:5px; right:5px;" onclick="document.getElementById('general-mood-image').value=''; document.getElementById('general-mood-image-preview').innerHTML='';">×</button>
+                </div>
+            `;
+            }
+            reader.readAsDataURL(file);
+        } else {
+            previewContainer.innerHTML = '';
+        }
+    },
+    handlePaste(event) {
+        const items = event.clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf("image") !== -1) {
+                const file = items[i].getAsFile();
+
+                const imageInput = document.getElementById('general-mood-image');
+
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                imageInput.files = dataTransfer.files;
+
+                imageInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+                event.preventDefault();
+                break;
+            }
+        }
+    },
+
+    async deleteEntry(id) {
+        const entryDate = this.moodData.find(e => e.id === id)?.date;
+        this.moodData = this.moodData.filter(entry => entry.id !== id);
+        await this.saveData();
+        await this.togglePinEntry(id, true);
+        if (!FloatingSearch.isWindowOpen) {
             alert('筆記已刪除。');
             this.renderCalendar();
-            this.loadReviewData(entryDate);
+            if (selectedDateForReview === entryDate) {
+                this.loadReviewData(entryDate);
+            }
         }
     },
 
@@ -2531,7 +2912,7 @@ const MoodTracker = {
         const editFormHTML = `
                         <div class="edit-mode-form">
                             <div class="mood-tags" style="margin: 10px 0;">${tagsHtml}</div>
-                            <textarea class="textarea" style="width: 100%; min-height: 100px;">${entry.content}</textarea>
+                            <textarea class="input-field" style="width: 100%; min-height: 100px;">${entry.content}</textarea>
                         </div>
                         `;
 
@@ -2547,9 +2928,15 @@ const MoodTracker = {
                         </div>
                         `;
 
-        const originalContentDiv = entryElement.querySelector('div:first-child');
-        const originalHTML = originalContentDiv.innerHTML;
-        originalContentDiv.innerHTML = `<div class="view-mode-content">${originalHTML}</div>` + editFormHTML;
+        const contentContainer = entryElement.querySelector('div:first-child');
+        if (!contentContainer) return;
+
+        contentContainer.innerHTML = `
+        <div class="edit-mode-form">
+            <div class="mood-tags" style="margin: 10px 0;">${tagsHtml}</div>
+            <textarea class="input-field" style="width: 100%; min-height: 100px;">${entry.content}</textarea>
+        </div>
+    `;
 
         const actionsDiv = entryElement.querySelector('.review-entry-actions');
         actionsDiv.innerHTML = newButtonsHTML;
@@ -2572,7 +2959,6 @@ const MoodTracker = {
         const entryElement = document.querySelector(`.review-entry[data-id="${id}"]`);
         if (!entryElement) return;
 
-        // 從編輯表單中獲取新內容和標籤
         const newContent = entryElement.querySelector('.edit-mode-form textarea').value.trim();
         if (!newContent) return alert('筆記內容不可為空！');
 
@@ -2583,7 +2969,6 @@ const MoodTracker = {
 
         this.saveData();
         alert('筆記已更新！');
-        // 重新渲染該日期的內容，恢復檢視模式
         this.loadReviewData(this.moodData[entryIndex].date);
         this.renderPinnedNotes();
     },
@@ -2731,24 +3116,37 @@ const MoodTracker = {
             return;
         }
         let html = `<h4>筆記詳情</h4>`;
+
         entries.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)).forEach(entry => {
             const isPinned = this.settings.pinnedEntryIds.includes(entry.id);
+
+            let imageHtml = '';
+            if (entry.file && entry.file.data) {
+                imageHtml = `
+            <div class="note-image-preview-container">
+                <img src="${entry.file.data}" class="note-image-preview" alt="${entry.file.name}" style="cursor:pointer;" onclick="ImageMemory.showModal(${entry.id})">
+                <button class="delete-image-btn" onclick="MoodTracker.deleteNoteImage(${entry.id}, true)">×</button>
+            </div>
+        `;
+            }
+
             html += `
-                <div class="review-entry" data-id="${entry.id}">
-                    <div>
-                        <strong>${entry.type === 'morning' ? '☀️ 起床' : (entry.type === 'evening' ? '🌙 睡前' : '📝 筆記')} (${entry.time})</strong>
-                        <div style="margin: 5px 0;">
-                            ${entry.moods.map(m => `<button class="mood-tag selected" style="cursor:pointer;" onclick="MoodTracker.findEntriesByTag('${m}')">${m}</button>`).join(' ')}
-                        </div>
-                        <div style="color: #333; margin-top: 8px;">${DOMPurify.sanitize(marked.parse(entry.content))}</div>
-                    </div>
-                    <div class="review-entry-actions">
-                        <button class="btn-pin" onclick="MoodTracker.editEntry(${entry.id})">✏️</button>
-                        <button class="btn-pin ${isPinned ? 'pinned' : ''}" onclick="MoodTracker.togglePinEntry(${entry.id})">📌</button>
-                        <button class="btn-delete" onclick="MoodTracker.deleteEntry(${entry.id})">🗑️</button>
-                    </div>
+        <div class="review-entry" data-id="${entry.id}">
+            <div>
+                <strong>${entry.type === 'morning' ? '☀️ 起床' : (entry.type === 'evening' ? '🌙 睡前' : '📝 筆記')} (${entry.time})</strong>
+                <div style="margin: 5px 0;">
+                    ${entry.moods.map(m => `<button class="mood-tag selected" style="cursor:pointer;" onclick="MoodTracker.findEntriesByTag('${m}')">${m}</button>`).join(' ')}
                 </div>
-            `;
+                <div style="color: var(--font-color); margin-top: 8px;">${DOMPurify.sanitize(marked.parse(entry.content))}</div>
+                ${imageHtml}
+            </div>
+            <div class="review-entry-actions">
+                <button class="btn-pin ${isPinned ? 'pinned' : ''}" onclick="MoodTracker.togglePinEntry(${entry.id})">📌</button>
+                <button class="btn-pin" onclick="MoodTracker.editEntry(${entry.id})">✏️</button>
+                <button class="btn-delete" onclick="MoodTracker.deleteEntry(${entry.id})">🗑️</button>
+            </div>
+        </div>
+    `;
         });
         reviewContent.innerHTML = html;
     },
@@ -2918,58 +3316,55 @@ const MoodTracker = {
         pinnedEntries.forEach(entry => {
             const previewText = entry.content.replace(/<[^>]*>/g, '').substring(0, 40) + (entry.content.length > 40 ? '...' : '');
             html += `
-                            <div class="pinned-item-wrapper" style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                                <div class="review-entry pinned-note" id="pinned-note-${entry.id}" onclick="togglePinnedNoteView(${entry.id})" style="flex-grow: 1; margin-bottom: 0;">
-                                    <div class="pinned-note-header">
-                                        <strong>${entry.date} (${entry.type === 'morning' ? '☀️' : (entry.type === 'evening' ? '🌙' : '📝')})</strong>
-                                    </div>
-                                    <div class="pinned-note-preview">
-                                        <p>${previewText}</p> 
-                                    </div>
-                                    <div class="pinned-note-full" style="display: none;">
-                                        <div>${DOMPurify.sanitize(marked.parse(entry.content))}</div>
-                                    </div>
-                                </div>
-                                <button class="btn-pin pinned" style="flex-shrink: 0;" onclick="event.stopPropagation(); MoodTracker.togglePinEntry(${entry.id})">📌</button>
-                            </div>
-                            `;
+    <div class="pinned-item-wrapper" draggable="true" data-id="${entry.id}" style="display: flex; flex-direction:column; gap: 0; margin-bottom: 5px;">
+         <div class="drop-indicator top"></div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <div class="review-entry pinned-note" id="pinned-note-${entry.id}" onclick="togglePinnedNoteView(${entry.id})" style="flex-grow: 1; margin-bottom: 0;">
+                <div class="pinned-note-header">
+                    <strong>${entry.date} (${entry.type === 'morning' ? '☀️' : (entry.type === 'evening' ? '🌙' : '📝')})</strong>
+                </div>
+                <div class="pinned-note-preview">
+                    <p>${previewText}</p>
+                </div>
+                <div class="pinned-note-full" style="display: none;">
+                    <div>${DOMPurify.sanitize(marked.parse(entry.content))}</div>
+                </div>
+            </div>
+            <button class="btn-pin pinned" style="flex-shrink: 0;" onclick="event.stopPropagation(); MoodTracker.togglePinEntry(${entry.id})">📌</button>
+        </div>
+        <div class="drop-indicator bottom"></div>
+    </div>
+`;
         });
         container.innerHTML = html;
+        this.addDragDropListeners();
     },
 
     findEntriesByTag(tagName) {
+        FloatingSearch.openWindow();
+
         const foundEntries = this.moodData
             .filter(entry => entry.moods.includes(tagName))
             .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-        const titleEl = document.getElementById('tag-search-title');
-        const contentEl = document.getElementById('tag-search-content');
-
-        titleEl.innerHTML = `
-                        <svg xmlns="http://www.w3.org/2000/svg" class="content-icon" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M19 3h-4a2 2 0 0 0 -2 2v12a4 4 0 0 0 8 0v-12a2 2 0 0 0 -2 -2" /><path d="M13 7.35l-2 -2a2 2 0 0 0 -2.828 0l-2.828 2.828a2 2 0 0 0 0 2.828l9 9" /><path d="M7.3 13h-2.3a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h12" /><path d="M17 17l0 .01" /></svg>
-                        標籤 "${tagName}" 的所有筆記
-                    `;
+        const title = `標籤 "${tagName}" 的搜尋結果`;
 
         if (foundEntries.length === 0) {
-            contentEl.innerHTML = '<p>找不到包含此標籤的筆記。</p>';
-        } else {
-            let html = '';
-            foundEntries.forEach(entry => {
-                html += `
-                                <div class="review-entry" style="margin-bottom: 15px;">
-                                    <div>
-                                        <strong>${entry.date} - ${entry.type === 'morning' ? '☀️ 起床' : '🌙 睡前'} (${entry.time})</strong>
-                                        <div style="margin: 5px 0;">${entry.moods.map(m => `<span class="mood-tag selected" style="cursor:default;">${m}</span>`).join(' ')}</div>
-                                        <p style="white-space: pre-wrap; color: #333; margin-top: 8px;">${entry.content}</p>
-                                    </div>
-                                </div>
-                            `;
-            });
-            contentEl.innerHTML = html;
+            FloatingSearch.render(title, '<p>找不到包含此標籤的筆記。</p>');
+            return;
         }
-
-        showSection('tag-search-results');
-        document.getElementById('app-title').textContent = `搜尋結果：${tagName}`;
+        let html = '';
+        foundEntries.forEach(entry => {
+            html += `
+            <div class="review-entry" style="margin-bottom: 15px;">
+                <div>
+                    <strong>${entry.date} - ${entry.type === 'morning' ? '☀️ 起床' : (entry.type === 'evening' ? '🌙 睡前' : '📝 筆記')} (${entry.time})</strong>
+                    <div style="margin: 5px 0;">${entry.moods.map(m => `<span class="mood-tag selected" style="cursor:default;">${m}</span>`).join(' ')}</div>
+                    <div style="margin-top: 8px;">${DOMPurify.sanitize(marked.parse(entry.content))}</div>
+                </div>
+            </div>`;
+        });
+        FloatingSearch.render(title, html);
     },
 
     async addCustomTag() {
@@ -3058,6 +3453,101 @@ const MoodTracker = {
         };
         reader.readAsText(file);
         event.target.value = '';
+    },
+
+    addDragDropListeners() {
+        const container = document.getElementById('pinned-notes-content');
+        if (!container) return;
+
+        container.addEventListener('dragstart', (e) => this.handleDragStart(e));
+        container.addEventListener('dragover', (e) => this.handleDragOver(e));
+        container.addEventListener('dragleave', (e) => this.handleDragLeave(e));
+        container.addEventListener('drop', (e) => this.handleDrop(e));
+        container.addEventListener('dragend', (e) => this.handleDragEnd(e));
+    },
+
+    handleDragStart(e) {
+        const target = e.target.closest('.pinned-item-wrapper');
+        if (target) {
+            this.draggedItemId = target.dataset.id;
+            e.dataTransfer.effectAllowed = 'move';
+            setTimeout(() => {
+                target.classList.add('dragging');
+            }, 0);
+        }
+    },
+
+    handleDragOver(e) {
+        e.preventDefault();
+        const target = e.target.closest('.pinned-item-wrapper');
+        if (!target || target.dataset.id === this.draggedItemId) return;
+
+        document.querySelectorAll('.pinned-item-wrapper').forEach(el => {
+            el.classList.remove('drag-over', 'drag-over-top', 'drag-over-bottom');
+        });
+
+        target.classList.add('drag-over');
+
+        const rect = target.getBoundingClientRect();
+        const isAfter = e.clientY > rect.top + rect.height / 2;
+
+        if (isAfter) {
+            target.classList.add('drag-over-bottom');
+        } else {
+            target.classList.add('drag-over-top');
+        }
+    },
+
+    handleDragLeave(e) {
+        const target = e.target.closest('.pinned-item-wrapper');
+        if (target) {
+            target.classList.remove('drag-over', 'drag-over-top', 'drag-over-bottom');
+        }
+    },
+
+    async handleDrop(e) {
+        e.preventDefault();
+        const dropTarget = e.target.closest('.pinned-item-wrapper');
+        if (!dropTarget || !this.draggedItemId) return;
+
+        const draggedId = parseInt(this.draggedItemId);
+        const targetId = parseInt(dropTarget.dataset.id);
+
+        if (draggedId === targetId) return;
+
+        const ids = this.settings.pinnedEntryIds;
+        const draggedIndex = ids.indexOf(draggedId);
+        let targetIndex = ids.indexOf(targetId);
+
+        if (draggedIndex === -1 || targetIndex === -1) return;
+
+        const rect = dropTarget.getBoundingClientRect();
+        const isAfter = e.clientY > rect.top + rect.height / 2;
+
+        const [draggedItem] = ids.splice(draggedIndex, 1);
+
+        targetIndex = ids.indexOf(targetId);
+
+        if (isAfter) {
+            ids.splice(targetIndex + 1, 0, draggedItem);
+        } else {
+            ids.splice(targetIndex, 0, draggedItem);
+        }
+
+        await this._saveSettingsData();
+        document.querySelectorAll('.pinned-item-wrapper').forEach(el => {
+            el.classList.remove('drag-over', 'drag-over-top', 'drag-over-bottom');
+        });
+        this.renderPinnedNotes();
+    },
+
+    handleDragEnd(e) {
+        const target = e.target.closest('.pinned-item-wrapper');
+        if (target) target.classList.remove('dragging');
+        document.querySelectorAll('.pinned-item-wrapper.drag-over-top, .pinned-item-wrapper.drag-over-bottom').forEach(el => {
+            el.classList.remove('drag-over-top', 'drag-over-bottom');
+        });
+        this.draggedItemId = null;
     }
 };
 
@@ -3077,6 +3567,124 @@ function toggleTaskVisibility() {
     }
 }
 
+// --- 圖像記憶模組 ---
+const ImageMemory = {
+    render() {
+        const gallery = document.getElementById('image-gallery-container');
+        const notesWithImages = MoodTracker.moodData
+            .filter(note => note.file && note.file.data)
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        if (notesWithImages.length === 0) {
+            gallery.innerHTML = '<p>目前沒有任何圖片記錄。</p>';
+            return;
+        }
+
+        gallery.innerHTML = notesWithImages.map(note => `
+            <div class="gallery-item" onclick="ImageMemory.showModal(${note.id})">
+                <img src="${note.file.data}" alt="${note.file.name}" loading="lazy">
+                <div class="overlay">${note.date}</div>
+            </div>
+        `).join('');
+    },
+
+    showModal(noteId) {
+        const modal = document.getElementById('image-modal');
+        const note = MoodTracker.moodData.find(n => n.id === noteId);
+        if (!note) return;
+
+        document.getElementById('modal-image').src = note.file.data;
+
+        document.getElementById('delete-modal-image-btn').onclick = () => this.deleteModalImage(noteId);
+        document.getElementById('edit-modal-note-btn').onclick = () => this.toggleEditMode(noteId, true);
+        document.getElementById('save-modal-note-btn').onclick = () => this.saveEditedNote(noteId);
+        document.getElementById('cancel-modal-note-btn').onclick = () => this.toggleEditMode(noteId, false);
+
+        this.toggleEditMode(noteId, false);
+
+        modal.classList.remove('hidden');
+    },
+
+    toggleEditMode(noteId, isEditing) {
+        const modal = document.getElementById('image-modal');
+        const note = MoodTracker.moodData.find(n => n.id === noteId);
+        if (!note) return;
+
+        const contentContainer = document.getElementById('modal-note-content');
+        const viewControls = modal.querySelector('.view-mode-controls');
+        const editControls = modal.querySelector('.edit-mode-controls');
+
+        if (isEditing) {
+            const allTags = [...MoodTracker.defaultTags, ...(MoodTracker.settings.customTags || [])];
+            const tagsHtml = allTags.map(tag => {
+                const isSelected = note.moods.includes(tag);
+                return `<button class="mood-tag ${isSelected ? 'selected' : ''}" data-mood="${tag}">${tag}</button>`;
+            }).join('');
+
+            contentContainer.innerHTML = `
+                <div class="mood-tags" id="modal-mood-tags">${tagsHtml}</div>
+                <textarea class="input-field" style="min-height: 120px;">${note.content}</textarea>
+            `;
+
+            contentContainer.querySelector('.mood-tags').onclick = (e) => {
+                if (e.target.classList.contains('mood-tag')) {
+                    e.target.classList.toggle('selected');
+                }
+            };
+            const textarea = contentContainer.querySelector('textarea');
+            textarea.addEventListener('input', () => autoResizeTextarea(textarea));
+            setTimeout(() => autoResizeTextarea(textarea), 0);
+
+        } else {
+            contentContainer.innerHTML = `
+                <strong>${note.date} (${note.time})</strong>
+                <div>${note.moods.map(m => `<span class="mood-tag selected" style="font-size:0.8rem; padding: 2px 8px; cursor:default;">${m}</span>`).join(' ')}</div>
+                <div style="margin-top: 10px;">${DOMPurify.sanitize(marked.parse(note.content))}</div>
+            `;
+        }
+
+        viewControls.classList.toggle('hidden', isEditing);
+        editControls.classList.toggle('hidden', !isEditing);
+    },
+
+    async saveEditedNote(noteId) {
+        const modal = document.getElementById('image-modal');
+        const note = MoodTracker.moodData.find(e => e.id === noteId);
+        if (!note) return;
+
+        const contentContainer = document.getElementById('modal-note-content');
+        const newContent = contentContainer.querySelector('textarea').value.trim();
+        const selectedTags = [...contentContainer.querySelectorAll('.mood-tags .mood-tag.selected')].map(tag => tag.dataset.mood);
+
+        if (!newContent) {
+            alert("筆記內容不能為空！");
+            return;
+        }
+
+        note.content = newContent;
+        note.moods = selectedTags;
+
+        await MoodTracker.saveData();
+
+        this.toggleEditMode(noteId, false);
+
+        if (selectedDateForReview === note.date) {
+            MoodTracker.loadReviewData(note.date);
+        }
+        MoodTracker.renderPinnedNotes();
+    },
+
+    async deleteModalImage(noteId) {
+        await MoodTracker.deleteNoteImage(noteId, true);
+        this.closeModal();
+        this.render();
+    },
+
+    closeModal() {
+        document.getElementById('image-modal').classList.add('hidden');
+        document.getElementById('modal-image').src = '';
+    }
+};
 // --- 資料管理模組 ---
 const DataManager = {
     async exportAllData() {
@@ -3166,28 +3774,55 @@ const DataManager = {
             alert("清除資料失敗，請查看主控台錯誤訊息。");
         }
     }
+};
+// --- 浮動搜尋模組 ---
+const FloatingSearch = {
+    isWindowOpen: false,
 
+    init() {
+        document.getElementById('global-search-bubble').addEventListener('click', () => this.toggleWindow());
+        document.getElementById('floating-search-btn').addEventListener('click', () => GlobalSearch.performSearch());
+        document.getElementById('floating-search-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') GlobalSearch.performSearch();
+        });
+    },
+
+    toggleWindow() {
+        this.isWindowOpen = !this.isWindowOpen;
+        document.getElementById('global-search-window').classList.toggle('hidden', !this.isWindowOpen);
+    },
+
+    openWindow() {
+        if (this.isWindowOpen) return;
+        this.isWindowOpen = true;
+        document.getElementById('global-search-window').classList.remove('hidden');
+    },
+
+    closeWindow() {
+        if (!this.isWindowOpen) return;
+        this.isWindowOpen = false;
+        document.getElementById('global-search-window').classList.add('hidden');
+    },
+
+    render(title, content) {
+        document.getElementById('search-window-title').textContent = title;
+        document.getElementById('floating-search-results').innerHTML = content;
+    }
 };
 
 // --- 全局搜尋模組 ---
 const GlobalSearch = {
     async performSearch() {
-        const query = document.getElementById('global-search-input').value.trim().toLowerCase();
-        const resultsContainer = document.getElementById('global-search-results');
+        const query = document.getElementById('floating-search-input').value.trim().toLowerCase();
+        if (!query) return;
 
-        if (!query) {
-            resultsContainer.innerHTML = '<p>請輸入關鍵字以開始搜尋。</p>';
-            return;
-        }
-
-        resultsContainer.innerHTML = '<p>正在搜尋中...</p>';
+        FloatingSearch.render('搜尋中...', '<p>正在搜尋中...</p>');
 
         try {
             const moods = await DBHelper.getAll('moods');
             const tasks = await DBHelper.getAll('tasks');
 
             let results = [];
-
             moods.forEach(entry => {
                 const contentMatch = entry.content.toLowerCase().includes(query);
                 const tagMatch = entry.moods.some(tag => tag.toLowerCase().includes(query));
@@ -3212,116 +3847,100 @@ const GlobalSearch = {
 
         } catch (error) {
             console.error("搜尋時發生錯誤:", error);
-            resultsContainer.innerHTML = '<p>搜尋時發生錯誤，請稍後再試。</p>';
+            FloatingSearch.render('錯誤', '<p>搜尋時發生錯誤，請稍後再試。</p>');
         }
     },
 
     renderResults(results, query) {
-        const container = document.getElementById('global-search-results');
+        const title = `找到 ${results.length} 筆關於 "${query}" 的結果`;
         if (results.length === 0) {
-            container.innerHTML = '<p>找不到符合條件的結果。</p>';
+            FloatingSearch.render(title, '<p>找不到符合條件的結果。</p>');
             return;
         }
 
-        let html = `<h4>找到 ${results.length} 筆結果：</h4>`;
-        const highlight = (text, query) => text.replace(new RegExp(query, 'gi'), (match) => `<mark>${match}</mark>`);
+        const highlight = (text, q) => text.replace(new RegExp(q, 'gi'), (match) => `<mark>${match}</mark>`);
 
-        results.forEach(result => {
-            const resultId = result.data.id;
-            const resultType = result.type;
-            html += `<div class="review-entry" style="margin-bottom: 15px;" id="search-result-${resultId}">`;
-
+        let html = results.map(result => {
             let contentHTML = '';
             let titleHTML = '';
+            const resultId = result.data.id;
+            const resultType = result.type;
+            const resultDate = result.data.date;
 
-            if (result.type === 'mood') {
+            if (resultType === 'mood') {
                 const entry = result.data;
-                titleHTML = `<strong>[心情筆記] ${entry.date} - ${entry.type === 'morning' ? '☀️' : '🌙'} (${entry.time})</strong>`;
+                titleHTML = `<strong>[心情筆記] ${entry.date} - ${entry.time}</strong>`;
                 contentHTML = `<div class="search-content-display">${DOMPurify.sanitize(marked.parse(highlight(entry.content, query)))}</div>`;
-            } else if (result.type === 'task') {
+            } else if (resultType === 'task') {
                 const task = result.data;
                 titleHTML = `<strong>[時間表] ${task.date} (${task.time})</strong>`;
-                contentHTML = `<p class="search-content-display" style="white-space: pre-wrap; color: #333; margin-top: 8px;">${highlight(task.content, query)}</p>
-                                <small>象限: ${task.quadrant}, 狀態: ${task.completed ? '已完成' : '未完成'}</small>`;
+                contentHTML = `<p class="search-content-display">${highlight(task.content, query)}</p><small>象限: ${task.quadrant}, 狀態: ${task.completed ? '已完成' : '未完成'}</small>`;
             }
 
-            html += `
-                            <div style="flex-grow: 1; margin-right: 15px;">
-                                <div>${titleHTML}</div>
-                                <div class="search-content-area" style="margin-top: 8px;">${contentHTML}</div>
-                            </div>
-                            <div class="search-actions">
-                                <button class="btn-pin" onclick="GlobalSearch.editItem('${resultType}', ${resultId})">✏️</button>
-                            </div>
-                        `;
-            html += '</div>';
-        });
+            const actionsHTML = `
+        <div class="search-actions">
+            <button class="btn-pin" onclick="GlobalSearch.handleAction('edit', '${resultType}', ${resultId}, '${resultDate}')">✏️</button>
+            <button class="btn-delete" onclick="GlobalSearch.handleAction('delete', '${resultType}', ${resultId})">🗑️</button>
+        </div>
+    `;
 
-        container.innerHTML = html;
+            return `<div class="review-entry">
+                <div class="search-content-area">${titleHTML}${contentHTML}</div>
+                ${actionsHTML}
+            </div>`;
+        }).join('');
+
+        FloatingSearch.render(title, html);
     },
 
-    editItem(type, id) {
-        const itemContainer = document.getElementById(`search-result-${id}`);
-        if (!itemContainer) return;
+    handleAction: async function (action, type, id, date = null) {
+        if (action === 'delete') {
+            if (!confirm('確定要從搜尋結果中刪除此項目嗎？此操作無法復原。')) return;
 
-        itemContainer.classList.add('is-editing', 'unified-edit-container');
+            if (type === 'mood') {
+                await MoodTracker.deleteEntry(id);
+            } else if (type === 'task') {
+                await TimeQuadrantTracker.deleteTask(id);
+            }
+            this.performSearch();
 
-        const contentArea = itemContainer.querySelector('.search-content-area');
-        const actionsArea = itemContainer.querySelector('.search-actions');
+        } else if (action === 'edit') {
+            if (type === 'mood' && date) {
+                showSection('review-stats');
 
-        let currentContent = '';
-        if (type === 'mood') {
-            currentContent = MoodTracker.moodData.find(m => m.id === id).content;
-        } else if (type === 'task') {
-            currentContent = TimeQuadrantTracker.tasks.find(t => t.id === id).content;
+                setTimeout(() => {
+                    const newDate = new Date(date + 'T00:00:00');
+                    currentReviewDate = newDate;
+                    document.getElementById('review-month').value = date.substring(0, 7);
+
+                    MoodTracker.renderCalendar();
+                    MoodTracker.renderMoodChart();
+                    MoodTracker.loadReviewData(date);
+
+                    setTimeout(() => {
+                        const dayEl = document.querySelector(`.calendar-day[data-date="${date}"]`);
+                        if (dayEl) {
+                            document.querySelectorAll('.calendar-day.selected').forEach(d => d.classList.remove('selected'));
+                            dayEl.classList.add('selected');
+                        }
+                        MoodTracker.editEntry(id);
+                    }, 150);
+                }, 100);
+
+            } else if (type === 'task') {
+                const task = TimeQuadrantTracker.tasks.find(t => t.id === id);
+                if (task) {
+                    showSection('time-quadrant');
+                    setTimeout(() => {
+                        TimeQuadrantTracker.currentDate = new Date(task.date + 'T00:00:00');
+                        TimeQuadrantTracker.render();
+                        TimeQuadrantTracker.openTaskForm(id);
+                    }, 50);
+                }
+            }
+            FloatingSearch.closeWindow();
         }
-
-        const oldForm = contentArea.querySelector('.edit-mode-form');
-        if (oldForm) oldForm.remove();
-
-        const editFormHTML = `
-            <div class="edit-mode-form">
-                <textarea class="textarea" style="width: 100%; min-height: 180px; font-size: 0.95rem; line-height: 1.6;">${currentContent}</textarea>
-            </div>
-        `;
-        contentArea.innerHTML = `<div class="view-mode-content">${contentArea.innerHTML}</div>` + editFormHTML;
-
-        const newButtonsHTML = `
-            <div class="view-mode-controls">
-                <button class="btn-pin" onclick="GlobalSearch.editItem('${type}', ${id})">✏️</button>
-            </div>
-            <div class="edit-mode-controls">
-                <button class="btn-save-unified" onclick="GlobalSearch.saveEdit('${type}', ${id})">💾</button>
-                <button class="btn-cancel-unified" onclick="GlobalSearch.performSearch()">❌</button>
-            </div>
-        `;
-        actionsArea.innerHTML = newButtonsHTML;
-        const searchTextarea = itemContainer.querySelector('.edit-mode-form textarea');
-        searchTextarea.addEventListener('input', () => autoResizeTextarea(searchTextarea));
-        autoResizeTextarea(searchTextarea);
     },
-
-    async saveEdit(type, id) {
-        const itemContainer = document.getElementById(`search-result-${id}`);
-        const newContent = itemContainer.querySelector('.edit-mode-form textarea').value;
-
-        if (type === 'mood') {
-            const entryIndex = MoodTracker.moodData.findIndex(m => m.id === id);
-            if (entryIndex > -1) {
-                MoodTracker.moodData[entryIndex].content = newContent;
-                await MoodTracker.saveData();
-            }
-        } else if (type === 'task') {
-            const taskIndex = TimeQuadrantTracker.tasks.findIndex(t => t.id === id);
-            if (taskIndex > -1) {
-                TimeQuadrantTracker.tasks[taskIndex].content = newContent;
-                await TimeQuadrantTracker.saveData();
-            }
-        }
-
-        alert('儲存成功！');
-        this.performSearch();
-    }
 };
 
 // --- 頁面初始化 ---
@@ -3329,26 +3948,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         await DBHelper.init();
 
-        await MoodTracker.init();
-        await HabitTracker.init();
-        await TimeQuadrantTracker.init();
-        await InputSaver.init();
-        await FloatingAIChat.init();
-        await ProactiveAIManager.init();
-        document.querySelectorAll('.textarea').forEach(textarea => {
-            textarea.addEventListener('input', () => autoResizeTextarea(textarea));
-            autoResizeTextarea(textarea);
-        });
-
         const lastSectionItem = await DBHelper.get('appState', 'lastActiveSection');
         const lastSection = lastSectionItem ? lastSectionItem.value : 'attendance-tracker';
         showSection(lastSection);
+
+        await Promise.all([
+            MoodTracker.init(),
+            HabitTracker.init(),
+            TimeQuadrantTracker.init(),
+            InputSaver.init(),
+            FloatingAIChat.init(),
+            ProactiveAIManager.init()
+        ]);
+
+        FloatingSearch.init();
+
+        document.querySelectorAll('textarea').forEach(textarea => {
+            textarea.addEventListener('input', () => autoResizeTextarea(textarea));
+            autoResizeTextarea(textarea);
+        });
 
     } catch (error) {
         console.error("應用程式初始化失敗:", error);
         document.body.innerHTML = "<h1>應用程式載入失敗，請檢查主控台錯誤。</h1>";
     }
 });
+
 
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
