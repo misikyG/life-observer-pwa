@@ -1579,12 +1579,12 @@ const HabitTracker = {
     calculateMilestone(count) {
         const milestones = [
             { level: 0, name: '種子', min: 0, next: 10, color: '#CDA283' },
-            { level: 1, name: '萌芽', min: 10, next: 25, color: '#A9C4A4' },
-            { level: 2, name: '幼苗', min: 25, next: 50, color: '#82B485' },
-            { level: 3, name: '小樹', min: 50, next: 100, color: '#57A05B' },
-            { level: 4, name: '大樹', min: 100, next: 200, color: '#3E8F62' },
-            { level: 5, name: '森林', min: 200, next: 500, color: '#2E6B49' },
-            { level: 6, name: '世界樹', min: 500, next: Infinity, color: '#2A9D8F' }
+            { level: 1, name: '萌芽', min: 10, next: 25, color: '#b3c458ff' },
+            { level: 2, name: '幼苗', min: 25, next: 50, color: '#83c769ff' },
+            { level: 3, name: '小樹', min: 50, next: 100, color: '#4b914eff' },
+            { level: 4, name: '大樹', min: 100, next: 200, color: '#357e56ff' },
+            { level: 5, name: '森林', min: 200, next: 500, color: '#24613fff' },
+            { level: 6, name: '世界樹', min: 500, next: Infinity, color: '#278378ff' }
         ];
 
         let current = milestones[0];
@@ -2549,7 +2549,7 @@ const MoodTracker = {
         pinnedEntryIds: [],
         aiDataDays: 1,
     },
-    defaultTags: ['快樂', '平靜', '壓力', '疲憊', '感恩'],
+    defaultTags: ['快樂', '感恩', '平靜', '疲憊', '壓力'],
 
     async init() {
         await this.loadData();
